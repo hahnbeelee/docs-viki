@@ -1,0 +1,274 @@
+---
+title: "Leads API Reference — Yelp Request-a-Quote Endpoints"
+sidebarTitle: "Leads"
+description: "Read, respond to, and manage Yelp Request-a-Quote leads for your businesses. Includes all Lead and Lead Events CRUD endpoints with request/response schemas."
+---
+
+The Yelp Leads API lets you ingest, track, and respond to leads generated through Yelp's "Request a Quote" flow. Once a consumer submits a quote request, Yelp creates a **lead** and associated **events** (messages and interactions). Your integration can read lead details, retrieve the full message thread, post replies on behalf of the business, and manage read/reply state — all without the business owner leaving your platform.
+
+<Warning>
+  **Partner API — Access disabled by default.** The Leads API is available exclusively to Yelp advertising and listing management reseller partners. Contact your Yelp account team or visit [business.yelp.com/partners](https://business.yelp.com/partners/) to inquire about access. All endpoints require OAuth 2.0 Authorization Code authentication.
+</Warning>
+
+<Note>
+  All Leads API endpoints enforce a default rate limit of **5 requests per second per client per endpoint**. Contact partner-support@yelp.com to request a higher limit.
+</Note>
+
+---
+
+## GET /v3/leads/{id} — Get Lead
+
+Retrieve the full details of a single lead including consumer information, project description, and current status.
+
+```
+GET https://api.yelp.com/v3/leads/{id}
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique Yelp identifier for the lead.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/leads/TbvEUYEi02cmSBmqCjQbkg" \
+  -H "Authorization: Bearer YOUR_OAUTH_TOKEN"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "id": "TbvEUYEi02cmSBmqCjQbkg",
+  "business_id": "SoVHhx7Hel_XX0DKCLp72Q",
+  "time_created": "2024-06-09T09:41:13+00:00",
+  "status": "new",
+  "is_replied": false,
+  "link_to_reply_in_yelp": "https://biz.yelp.com/leads_center/SoVHhx7Hel_XX0DKCLp72Q/leads/TbvEUYEi02cmSBmqCjQbkg",
+  "consumer": {
+    "name": "Alex Johnson",
+    "email": "masked_abc123@yelp.com",
+    "phone_number": null
+  },
+  "project": {
+    "description": "Looking for a plumber to fix a leaking pipe under the sink.",
+    "attachments": []
+  }
+}
+```
+
+### Response Fields
+
+<ResponseField name="id" type="string">
+  Unique Yelp lead identifier. Use this as the primary key when mapping to your CRM.
+</ResponseField>
+<ResponseField name="business_id" type="string">
+  Yelp ID of the business that received this lead.
+</ResponseField>
+<ResponseField name="time_created" type="string">
+  ISO 8601 timestamp when the lead was created.
+</ResponseField>
+<ResponseField name="status" type="string">
+  Current lead status (e.g., `new`, `replied`).
+</ResponseField>
+<ResponseField name="is_replied" type="boolean">
+  Whether the business has replied to this lead.
+</ResponseField>
+<ResponseField name="link_to_reply_in_yelp" type="string">
+  Deep link to the lead conversation in Yelp's Leads Center. Useful for platforms without a unified inbox.
+</ResponseField>
+<ResponseField name="consumer" type="object">
+  Consumer information.
+  <Expandable title="Consumer fields">
+    <ResponseField name="name" type="string">Consumer's display name.</ResponseField>
+    <ResponseField name="email" type="string">Masked/temporary email address. Valid for 30 days from lead creation.</ResponseField>
+    <ResponseField name="phone_number" type="string">Consumer's phone number, if they have opted in or shared it in the chat. Otherwise `null`.</ResponseField>
+  </Expandable>
+</ResponseField>
+<ResponseField name="project" type="object">
+  Project or inquiry details submitted by the consumer.
+  <Expandable title="Project fields">
+    <ResponseField name="description" type="string">The consumer's project description or inquiry text.</ResponseField>
+    <ResponseField name="attachments" type="array">List of attachment objects (photos, files) submitted with the lead.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## GET /v3/leads/{id}/events — Get Lead Events
+
+Retrieve the full message thread (all interaction events) for a lead.
+
+```
+GET https://api.yelp.com/v3/leads/{id}/events
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique Yelp identifier for the lead.
+</ParamField>
+
+### Example Response
+
+```json
+{
+  "events": [
+    {
+      "id": "IsKxQAYZNqCjvRRmNoiCUw",
+      "time_created": "2024-06-09T09:41:13+00:00",
+      "event_type": "NEW_EVENT",
+      "channel": null,
+      "user_type": "CONSUMER",
+      "text": "Hi, I'd like to get a quote for fixing a leaking pipe.",
+      "attachments": []
+    },
+    {
+      "id": "Xp9mNqRzLdBvYyCjUwTkAa",
+      "time_created": "2024-06-09T10:15:00+00:00",
+      "event_type": "NEW_EVENT",
+      "channel": "API-SELF",
+      "user_type": "BIZ",
+      "text": "Thanks for reaching out! We can come by Thursday between 2–5pm.",
+      "attachments": []
+    }
+  ]
+}
+```
+
+### Response Fields
+
+<ResponseField name="events" type="array">
+  Ordered list of interaction events for this lead.
+  <Expandable title="Event fields">
+    <ResponseField name="id" type="string">Unique event identifier.</ResponseField>
+    <ResponseField name="time_created" type="string">ISO 8601 timestamp of the event.</ResponseField>
+    <ResponseField name="event_type" type="string">Type of event (e.g., `NEW_EVENT`).</ResponseField>
+    <ResponseField name="channel" type="string">Ingestion channel for business messages (e.g., `API-SELF`). `null` for consumer messages or untracked channels.</ResponseField>
+    <ResponseField name="user_type" type="string">`CONSUMER` or `BIZ` — who sent this message.</ResponseField>
+    <ResponseField name="text" type="string">Message content.</ResponseField>
+    <ResponseField name="attachments" type="array">List of media attachments, if any.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## POST /v3/leads/{id}/events — Write a Reply Event
+
+Post a reply message to a lead on behalf of the business. This is the recommended way for businesses to respond — messages appear instantly in Yelp's lead conversation and are delivered to the consumer in the Yelp app.
+
+```
+POST https://api.yelp.com/v3/leads/{id}/events
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique Yelp identifier for the lead.
+</ParamField>
+
+### Request Body
+
+<ParamField body="text" type="string" required>
+  The reply message text. Plain text only; no HTML or rich formatting.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  "https://api.yelp.com/v3/leads/TbvEUYEi02cmSBmqCjQbkg/events" \
+  -H "Authorization: Bearer YOUR_OAUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Thanks for reaching out! We can schedule a visit for Thursday between 2–5pm."}'
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "id": "NewEventIdAbcXyz123",
+  "time_created": "2024-06-09T11:00:00+00:00",
+  "event_type": "NEW_EVENT",
+  "channel": "API-SELF",
+  "user_type": "BIZ",
+  "text": "Thanks for reaching out! We can schedule a visit for Thursday between 2–5pm.",
+  "attachments": []
+}
+```
+
+<Warning>
+  Sending the same message to the same lead within one hour returns a `400 SAME_SUCCESSIVE_MESSAGE` error. Wait for a consumer reply or send a different message.
+</Warning>
+
+---
+
+## POST /v3/leads/{id}/mark_as_replied — Mark Lead as Replied
+
+Mark a lead as replied outside of Yelp (e.g., when the business responded via phone or another channel). This updates the lead's `is_replied` status on Yelp without posting a message.
+
+```
+POST https://api.yelp.com/v3/leads/{id}/mark_as_replied
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique Yelp identifier for the lead.
+</ParamField>
+
+---
+
+## POST /v3/leads/{id}/events/mark_as_read — Mark Event as Read
+
+Mark all events in a lead as read for the authenticated business user.
+
+```
+POST https://api.yelp.com/v3/leads/{id}/events/mark_as_read
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique Yelp identifier for the lead.
+</ParamField>
+
+---
+
+## GET /v3/businesses/{business_id}/lead_ids — Get Lead IDs for a Business
+
+Retrieve a paginated list of lead IDs for a specific business. Use this endpoint to reconcile leads if your webhook endpoint experiences downtime.
+
+```
+GET https://api.yelp.com/v3/businesses/{business_id}/lead_ids
+```
+
+### Path Parameters
+
+<ParamField path="business_id" type="string" required>
+  The Yelp business ID to retrieve lead IDs for.
+</ParamField>
+
+### Example Response
+
+```json
+{
+  "lead_ids": [
+    "TbvEUYEi02cmSBmqCjQbkg",
+    "AnotherLeadId456Xyz",
+    "YetAnotherLead789Abc"
+  ],
+  "total": 3
+}
+```
+
+<Tip>
+  Poll `GET /v3/businesses/{business_id}/lead_ids` periodically to catch any leads that may have been missed due to webhook failures or downtime. Cross-reference against leads already in your CRM.
+</Tip>

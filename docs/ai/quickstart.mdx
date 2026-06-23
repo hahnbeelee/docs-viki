@@ -1,0 +1,220 @@
+---
+title: "Make Your First Yelp AI API Request"
+sidebarTitle: "Quickstart"
+description: "Go from zero to a working Yelp AI API integration in minutes — send your first query, read the response, and continue a multi-turn conversation."
+---
+
+This quickstart walks you through sending your first request to the Yelp AI API, understanding the response structure, and continuing the conversation with a follow-up question. By the end you'll have working code in both Python and curl that you can adapt immediately for your own application.
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+- A **Yelp Places API key** on the **Premium plan** (AI API access requires Premium). If you don't have one, sign up at the [Yelp Places API page](https://business.yelp.com/data/products/places-api/) and review the [authentication guide](/docs/fusion-authentication).
+- Basic familiarity with HTTP requests and JSON.
+- A terminal (for curl) or a Python 3 environment with the `requests` library installed (`pip install requests`).
+
+<Steps>
+
+### Get your API key
+
+Log in to the [Yelp Developer Portal](https://business.yelp.com/data/products/fusion) and copy your API key from the dashboard. Store it securely — never hard-code it in production code. For the examples below, substitute `your_api_key_here` with your actual key.
+
+### Send your first request
+
+Your first request doesn't need a `chat_id`. The API creates a new conversation session for you and returns a `chat_id` in the response that you use for follow-ups.
+
+<CodeGroup>
+
+```python Python
+import requests
+
+YELP_API_KEY = "your_api_key_here"
+url = "https://api.yelp.com/ai/chat/v2"
+
+headers = {
+    "Authorization": f"Bearer {YELP_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+data = {
+    "query": "Find the best pizza places in San Francisco"
+}
+
+response = requests.post(url, headers=headers, json=data)
+print(response.json())
+```
+
+```bash curl
+curl -X POST "https://api.yelp.com/ai/chat/v2" \
+  -H "Authorization: Bearer your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Find the best pizza places in San Francisco"
+  }'
+```
+
+</CodeGroup>
+
+<Tip>
+  Add a `user_context` object with `latitude` and `longitude` to get location-aware results. See the [overview](/docs/ai/overview) for the full field reference.
+</Tip>
+
+### Understand the response
+
+A successful response looks like this (abbreviated):
+
+```json
+{
+  "response": {
+    "text": "Here are some of the best pizza places in San Francisco. Tony's Pizza Napoletana is known for award-winning Neapolitan pizzas in North Beach. Golden Boy Pizza is famous for Sicilian-style squares with a thick, focaccia-like crust. That's Amore Woodfire Pizza features authentic wood-fired pies made with a Stefano Ferrera oven from Naples.",
+    "tags": [
+      {
+        "tag_type": "business",
+        "start": 66,
+        "end": 89,
+        "meta": { "business_id": "mSMZJj2pFvttWLpcDmgrEA" }
+      },
+      {
+        "tag_type": "highlight",
+        "start": 98,
+        "end": 136
+      }
+    ]
+  },
+  "types": ["business_search"],
+  "entities": [
+    {
+      "businesses": [
+        {
+          "id": "mSMZJj2pFvttWLpcDmgrEA",
+          "name": "Tony's Pizza Napoletana",
+          "rating": 4.2,
+          "review_count": 7815,
+          "price": "$$",
+          "location": {
+            "formatted_address": "1570 Stockton St\nSan Francisco, CA 94133"
+          },
+          "summaries": {
+            "short": "Bustling pizzeria with award-winning pizzas and outdoor seating in North Beach.",
+            "medium": "Located in a vibrant neighborhood, this internationally recognized pizzeria is popular for its diverse range of pizza styles, including Neapolitan, Detroit, St. Louis, and New York.",
+            "long": "Located in a vibrant neighborhood, this internationally recognized pizzeria is popular for its diverse range of pizza styles, including Neapolitan, Detroit, St. Louis, and New York, crafted with authentic Italian ingredients."
+          },
+          "contextual_info": {
+            "photos": [
+              { "original_url": "https://s3-media0.fl.yelpcdn.com/bphoto/EEYTzxAAtuaHx7Vw2piKCQ/o.jpg" }
+            ],
+            "review_snippet": "Tony's isn't just the [[HIGHLIGHT]]best pizza[[ENDHIGHLIGHT]] in the city, but it may be the best pizza I've ever had!"
+          }
+        }
+      ]
+    }
+  ],
+  "chat_id": "N1u996U6HInvhrCaedrb1Q"
+}
+```
+
+Here's what the key fields mean:
+
+| Field | Description |
+|---|---|
+| `response.text` | The AI's natural-language answer — ready to display to users |
+| `response.tags[]` | Spans in `response.text` marking business names (`tag_type: "business"`) and highlighted phrases (`tag_type: "highlight"`), with `start`/`end` character positions |
+| `response.tags[].meta.business_id` | Links a business name in the text to its full entity in `entities[].businesses[]` |
+| `types` | Describes the response type: `"business_search"`, `"business_question"`, or `"reservation"` |
+| `entities[].businesses[]` | Structured business data including name, address, rating, price, categories, photos, hours, and AI-generated summaries |
+| `chat_id` | Your session ID — **save this value** and pass it in the next request |
+
+### Continue the conversation
+
+To ask a follow-up question about the same businesses, include the `chat_id` from the previous response:
+
+<CodeGroup>
+
+```python Python
+chat_id = "N1u996U6HInvhrCaedrb1Q"  # from the previous response
+
+data = {
+    "query": "What are their opening hours?",
+    "chat_id": chat_id
+}
+
+response = requests.post(url, headers=headers, json=data)
+print(response.json())
+```
+
+```bash curl
+curl -X POST "https://api.yelp.com/ai/chat/v2" \
+  -H "Authorization: Bearer your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are their opening hours?",
+    "chat_id": "N1u996U6HInvhrCaedrb1Q"
+  }'
+```
+
+</CodeGroup>
+
+The follow-up response uses the same structure, but `types` will be `"business_question"` and `contextual_info.business_hours` will be populated with the weekly schedule for each business:
+
+```json
+{
+  "response": {
+    "text": "Tony's Pizza Napoletana is open Monday and Tuesday from 12:00 PM to 9:30 PM, Wednesday and Thursday until 10:00 PM, Friday and Saturday until 11:00 PM, and Sunday until 10:30 PM. Golden Boy Pizza is open Monday to Thursday 11:30 AM to 9:00 PM, Friday and Saturday until 11:00 PM, and Sunday 11:30 AM to 9:00 PM.",
+    "tags": [
+      {
+        "tag_type": "business",
+        "start": 0,
+        "end": 23,
+        "meta": { "business_id": "mSMZJj2pFvttWLpcDmgrEA" }
+      }
+    ]
+  },
+  "types": ["business_question"],
+  "entities": [
+    {
+      "businesses": [
+        {
+          "id": "mSMZJj2pFvttWLpcDmgrEA",
+          "name": "Tony's Pizza Napoletana",
+          "contextual_info": {
+            "business_hours": [
+              {
+                "day_of_week": "Monday",
+                "business_hours": [
+                  { "open_time": "2025-06-23 12:00:00", "close_time": "2025-06-23 21:30:00" }
+                ],
+                "special_hours_applied": false
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "chat_id": "N1u996U6HInvhrCaedrb1Q"
+}
+```
+
+</Steps>
+
+## Session Expiry
+
+<Note>
+  Chat sessions expire after a period of inactivity. If you send a request with a stale `chat_id`, the API will treat it as a new conversation. Design your application to handle session resets gracefully — for example, by detecting when the response returns different businesses than expected and prompting the user to start a new search.
+</Note>
+
+## Error Handling
+
+If your request is malformed or you've exceeded your daily call limit (20 calls/day on the Premium plan), the API returns a standard HTTP error code. A `429` response means you've hit the rate limit; a `401` means your API key is invalid or missing. For the full list of error codes, see the [AI API Reference](/reference/ai-chat).
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Capabilities" icon="list-check" href="/docs/ai/capabilities">
+    Learn what query types the AI API supports today, including business search, Q&A, comparisons, and reservations.
+  </Card>
+  <Card title="Agentic Integration" icon="robot" href="/docs/ai/agentic-integration">
+    Embed the Yelp AI API as a tool inside a LangChain + OpenAI agent for sophisticated, autonomous conversation flows.
+  </Card>
+</CardGroup>

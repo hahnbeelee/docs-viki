@@ -1,0 +1,7 @@
+# Source: https://docs.developer.yelp.com/
+
+- [**Yelp Places API**\\ \\ **Operational**\\ \\ The Yelp Places API allows you to get the best local content and user reviews from millions of businesses across 32 countries.](https://docs.developer.yelp.com/docs/places-intro)
+- [**Advertising APIs**\\ \\ **Operational**\\ \\ Tap into Yelp's hyper-local, purchase driven audience with tailored advertising solutions and analytics.](https://docs.developer.yelp.com/docs/api-testing-guidelines)
+- [**Insights APIs**\\ \\ **Operational**\\ \\ Access Yelp ratings, reviews, consumer engagement metrics, and other business data for commercial SaaS and analytics platforms to drive actionable insights.](https://docs.developer.yelp.com/docs/yelp-insights)
+- [**Platform APIs**\\ \\ **Operational**\\ \\ Yelp Platform allows 3rd party developers to integrate their transaction services for local businesses directly on Yelp sites and apps.](https://docs.developer.yelp.com/docs/checkout-api)
+- [**Reservations APIs**\\ \\ **Operational**\\ \\ The Yelp Reservations API exposes functionality for Yelp Reservations search and native booking flows into partner applications.](https://docs.developer.yelp.com/docs/reservation)

@@ -1,0 +1,181 @@
+---
+title: "Search for Businesses with the Yelp Places API"
+sidebarTitle: "Business Search"
+description: "Use the Business Search endpoint to find businesses by keyword, location, category, price, and more. Returns up to 50 results per page."
+---
+
+The Business Search endpoint is the primary way to discover businesses on Yelp. You can filter by search term, geographic area, category, price level, and open status. Every response includes a `businesses` array with name, address, rating, categories, and other attributes available on your plan tier. You can paginate through up to 240 total results per query using the `limit` and `offset` parameters.
+
+**Endpoint:** `GET https://api.yelp.com/v3/businesses/search`
+
+---
+
+## Parameters
+
+### Location (required — use one approach)
+
+You must supply either a `location` string **or** both `latitude` and `longitude`. Combining coordinate-based and string-based location in a single request is supported.
+
+<ParamField query="location" type="string">
+  A text description of the location, such as a city, neighborhood, address, or
+  postal code (e.g., `"San Francisco, CA"`, `"98101"`, `"Nob Hill, San Francisco"`).
+</ParamField>
+
+<ParamField query="latitude" type="number">
+  Latitude of the search origin in decimal degrees (e.g., `37.786882`). Required
+  if `location` is not provided. Must be paired with `longitude`.
+</ParamField>
+
+<ParamField query="longitude" type="number">
+  Longitude of the search origin in decimal degrees (e.g., `-122.399972`). Required
+  if `location` is not provided. Must be paired with `latitude`.
+</ParamField>
+
+### Search Filters
+
+<ParamField query="term" type="string">
+  Search keyword such as `"delis"`, `"coffee"`, or `"auto repair"`. Omit to
+  search all businesses near the given location.
+</ParamField>
+
+<ParamField query="radius" type="integer">
+  Search radius in meters. Maximum value is `40000` (approximately 25 miles).
+  Defaults to a location-appropriate value chosen by Yelp.
+</ParamField>
+
+<ParamField query="categories" type="string">
+  Filter results by one or more category aliases, comma-separated (e.g.,
+  `"restaurants"`, `"delis,sandwiches"`). See the
+  [Categories endpoint](/docs/places/overview#categories) for valid aliases.
+</ParamField>
+
+<ParamField query="price" type="string">
+  Filter by price level. Accepts a comma-separated list of values: `1` ($),
+  `2` ($$), `3` ($$$), `4` ($$$$). Example: `"1,2"` returns cheap and
+  moderately priced businesses.
+</ParamField>
+
+<ParamField query="open_now" type="boolean">
+  If `true`, only return businesses that are currently open. Defaults to `false`.
+  Cannot be used with `open_at`.
+</ParamField>
+
+<ParamField query="open_at" type="integer">
+  Filter to businesses open at a specific Unix timestamp (seconds since epoch).
+  Cannot be used with `open_now`.
+</ParamField>
+
+### Pagination
+
+<ParamField query="limit" type="integer" default="20">
+  Maximum number of results to return per request. Accepts values between `1`
+  and `50`. Defaults to `20`.
+</ParamField>
+
+<ParamField query="offset" type="integer" default="0">
+  Number of results to skip before returning the first result. Use this to
+  paginate. For example, `offset=50` starts at the 51st result. Maximum
+  effective offset is `240` (the API returns at most 240 total results per query).
+</ParamField>
+
+---
+
+## Example Request
+
+The following example searches for delis near San Francisco and returns the top 5 results:
+
+```bash
+curl --request GET \
+  --url "https://api.yelp.com/v3/businesses/search?term=delis&location=San+Francisco%2C+CA&limit=5" \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "accept: application/json"
+```
+
+You can also search using coordinates:
+
+```bash
+curl --request GET \
+  --url "https://api.yelp.com/v3/businesses/search?term=delis&latitude=37.786882&longitude=-122.399972&limit=5" \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "accept: application/json"
+```
+
+---
+
+## Example Response
+
+A successful response returns HTTP `200` with a JSON body containing `total` and a `businesses` array:
+
+```json
+{
+  "total": 1316,
+  "businesses": [
+    {
+      "id": "molinari-delicatessen-san-francisco",
+      "alias": "molinari-delicatessen-san-francisco",
+      "name": "Molinari Delicatessen",
+      "rating": 4.5,
+      "price": "$$",
+      "phone": "+14154212337",
+      "review_count": 910,
+      "url": "https://www.yelp.com/biz/molinari-delicatessen-san-francisco",
+      "image_url": "http://s3-media4.fl.yelpcdn.com/bphoto/6He-NlZrAv2mDV-yg6jW3g/o.jpg",
+      "is_closed": false,
+      "categories": [
+        {
+          "alias": "delis",
+          "title": "Delis"
+        }
+      ],
+      "coordinates": {
+        "latitude": 37.7983818054199,
+        "longitude": -122.407821655273
+      },
+      "location": {
+        "address1": "373 Columbus Ave",
+        "address2": "",
+        "address3": "",
+        "city": "San Francisco",
+        "state": "CA",
+        "zip_code": "94133",
+        "country": "US"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## Pagination
+
+<Note>
+  Each query returns a maximum of **240 total results**, regardless of how many
+  businesses match your search. Use `limit` (max `50`) and `offset` to page
+  through results:
+
+  - Page 1: `limit=50&offset=0`
+  - Page 2: `limit=50&offset=50`
+  - Page 3: `limit=50&offset=100`
+  - Page 5 (last): `limit=40&offset=200`
+
+  If `total` in the response exceeds 240, refine your search with narrower
+  filters (smaller radius, more specific categories, tighter location) rather
+  than relying on pagination alone.
+</Note>
+
+---
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Phone Search" icon="phone" href="/docs/places/overview#businesses">
+    **`GET /v3/businesses/search/phone`** — Find businesses by their phone
+    number. Useful when you have contact info but not a name or address.
+  </Card>
+  <Card title="Business Match" icon="arrows-left-right" href="/docs/places/overview#businesses">
+    **`GET /v3/businesses/matches`** — Match a business from an external data
+    source to a Yelp business using its name and address. Ideal for data
+    enrichment pipelines.
+  </Card>
+</CardGroup>

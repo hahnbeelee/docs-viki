@@ -1,0 +1,337 @@
+---
+title: "Query Yelp Business Data with GraphQL"
+sidebarTitle: "GraphQL"
+description: "Use the Yelp GraphQL API to request exactly the business data fields you need — no more, no less — in a single flexible POST request."
+---
+
+The Yelp GraphQL API gives you fine-grained control over the data you retrieve. Unlike the REST Places API — where every endpoint returns a fixed set of fields — GraphQL lets you specify exactly which fields you want in your query and receive only those fields back. This means faster requests when you need just a few fields, and the ability to combine multiple lookups into a single round trip. Both APIs share the same underlying data and the same authentication credentials, so you can use them interchangeably in your application.
+
+<Warning>
+  **GraphQL is currently in beta.** Yelp does not guarantee full stability, and implementation details may change. If you prefer a production-stable integration, use the [REST Places API](/places/search). The REST API is not going away and no migration is required.
+</Warning>
+
+---
+
+## Before You Begin
+
+<Steps>
+  <Step title="Create an app and get your API key">
+    If you haven't already, create an app in the [Manage App](https://www.yelp.com/developers/v3/manage_app) dashboard. Your private API key is generated automatically.
+  </Step>
+  <Step title="Join the GraphQL beta">
+    On the [Manage App](https://www.yelp.com/developers/v3/manage_app) page, opt in to the GraphQL beta program. You must join the beta before your key will be accepted by the GraphQL endpoint.
+  </Step>
+  <Step title="Use your existing API key">
+    GraphQL and the REST API use the same Bearer token authentication. No new credentials are needed.
+  </Step>
+</Steps>
+
+---
+
+## Endpoint
+
+All GraphQL queries are sent as `POST` requests to a single endpoint:
+
+```
+POST https://api.yelp.com/v3/graphql
+```
+
+You must include your API key as a Bearer token in the `Authorization` header on every request.
+
+---
+
+## Rate Limiting & Daily Query Limit
+
+<Note>
+  The GraphQL API is limited to **10,000 queries per day**. If you send multiple queries in a single request, each individual query counts separately toward your daily total. For example, a request containing three `business` queries counts as three queries against your limit.
+</Note>
+
+In addition to the query-count limit, the GraphQL API enforces a **daily points limit** based on how much data your queries return. Each node type in a response carries a points value:
+
+| Node Type | Points |
+|-----------|--------|
+| `businesses` | 1 |
+| `business` | 10 |
+| `business_attributes` | 1 |
+| `business_attribute` | 2 |
+| `reviews` | 1 |
+| `review` | 5 |
+| `event` | 1 |
+| `user` | 1 |
+| `location` | 5 |
+| `coordinates` | 1 |
+| `category` | 1 |
+
+Every 24-hour period you have a limit of **25,000 points** of data. This resets at midnight GMT. You can track your current usage on the [Manage App](https://www.yelp.com/developers/v3/manage_app) page.
+
+<Note>
+  A node's points value is the same regardless of how many fields within it you query. A `business` node is worth 10 points whether you request one field or ten. Points values are subject to change as the beta evolves.
+</Note>
+
+If you exceed the daily points limit, subsequent queries return an error response instead of data:
+
+```json
+{
+  "errors": [
+    {
+      "message": "You have reached the GraphQL daily points limit for this API key. The limit will reset at midnight GMT.",
+      "extensions": {
+        "code": "DAILY_POINTS_LIMIT_REACHED"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## Making Requests
+
+You can call the GraphQL API in several ways depending on your stack and preferences.
+
+<Tabs>
+  <Tab title="Raw GraphQL">
+    Send the query as a raw GraphQL string in the request body. Set the `Content-Type` header to `application/graphql`. This is the simplest approach for scripts and quick testing.
+
+    ```bash
+    curl -X POST \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/graphql" \
+      https://api.yelp.com/v3/graphql \
+      --data '
+    {
+      business(id: "garaje-san-francisco") {
+        name
+        id
+        alias
+        rating
+        url
+        coordinates {
+          latitude
+          longitude
+        }
+      }
+    }'
+    ```
+
+    <Warning>
+      You **must** set `Content-Type: application/graphql` when sending a raw query string. If you omit this header, the server interprets the body as JSON and the request will fail.
+    </Warning>
+  </Tab>
+
+  <Tab title="JSON Body">
+    Wrap your query in a JSON object with a `query` key and an optional `variables` key. Set the `Content-Type` header to `application/json`. This approach lets you pass variables cleanly without string interpolation.
+
+    ```bash
+    curl -X POST \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      https://api.yelp.com/v3/graphql \
+      --data '{
+        "query": "{ business(id: $business_id) { name id rating url } }",
+        "variables": {
+          "business_id": "garaje-san-francisco"
+        }
+      }'
+    ```
+
+    The JSON format is particularly useful when your query parameters are dynamic — you keep the query string constant and inject values through the `variables` object.
+  </Tab>
+
+  <Tab title="Client Libraries">
+    Client libraries handle authentication, request formatting, and response parsing automatically. Yelp's GraphQL API is compatible with standard Apollo and community clients.
+
+    **Apollo clients** (official, strongly typed):
+
+    <CardGroup cols={2}>
+      <Card title="React / React Native" icon="react" href="https://www.apollographql.com/docs/react">
+        Apollo Client for React and React Native. Includes hooks, caching, and state management.
+      </Card>
+      <Card title="iOS (Swift)" icon="apple" href="https://www.apollographql.com/docs/ios">
+        Apollo iOS for Swift. Generates type-safe Swift models from your schema.
+      </Card>
+      <Card title="Kotlin (Android)" icon="android" href="https://www.apollographql.com/docs/kotlin">
+        Apollo Kotlin for Android. Generates Kotlin data classes and coroutine-friendly APIs.
+      </Card>
+      <Card title="Angular" icon="code" href="https://the-guild.dev/graphql/apollo-angular/docs">
+        Apollo Angular for TypeScript-based Angular apps.
+      </Card>
+    </CardGroup>
+
+    **Additional community clients:**
+
+    <CardGroup cols={2}>
+      <Card title="Python (gql)" icon="python" href="https://github.com/graphql-python/gql">
+        Lightweight Python GraphQL client compatible with asyncio.
+      </Card>
+      <Card title="Ruby (graphql-client)" icon="gem" href="https://github.com/github/graphql-client">
+        Ruby GraphQL client from GitHub, with static query validation.
+      </Card>
+    </CardGroup>
+  </Tab>
+</Tabs>
+
+---
+
+## Query Examples
+
+### Basic Business Lookup
+
+Fetch the name, rating, URL, and coordinates for a single business by its Yelp ID or alias:
+
+```graphql
+{
+  business(id: "garaje-san-francisco") {
+    name
+    id
+    alias
+    rating
+    url
+    coordinates {
+      latitude
+      longitude
+    }
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "business": {
+      "name": "Garaje",
+      "id": "tnhfDv5Il8EaGSXZGiuQGg",
+      "alias": "garaje-san-francisco",
+      "rating": 4.5,
+      "url": "https://yelp.com/biz/garaje-san-francisco",
+      "coordinates": {
+        "latitude": 37.7817,
+        "longitude": -122.4088
+      }
+    }
+  }
+}
+```
+
+### Multiple Queries with Aliases
+
+You can include multiple queries in a single request. Use **aliases** to distinguish the results in the response. This avoids multiple round trips when you already have a list of business IDs:
+
+```graphql
+{
+  b1: business(id: "yelp-san-francisco") {
+    name
+    rating
+  }
+  b2: business(id: "garaje-san-francisco") {
+    name
+    rating
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "b1": {
+      "name": "Yelp",
+      "rating": 3.5
+    },
+    "b2": {
+      "name": "Garaje",
+      "rating": 4.5
+    }
+  }
+}
+```
+
+<Note>
+  Each aliased query counts as a separate query against your daily 10,000-query limit, and each business node returned costs 10 points against your daily points limit.
+</Note>
+
+### Using Fragments to Avoid Repetition
+
+When you repeatedly request the same set of fields across multiple queries, use **fragments** to define those fields once and reference them by name. This keeps your query documents clean and maintainable:
+
+Without fragments:
+
+```graphql
+{
+  b1: business(id: "yelp-san-francisco") {
+    name
+    id
+    rating
+    review_count
+    photos
+  }
+  b2: business(id: "garaje-san-francisco") {
+    name
+    id
+    rating
+    review_count
+    photos
+  }
+}
+```
+
+With a fragment:
+
+```graphql
+{
+  b1: business(id: "yelp-san-francisco") {
+    ...basicBizInfo
+  }
+  b2: business(id: "garaje-san-francisco") {
+    ...basicBizInfo
+  }
+}
+
+fragment basicBizInfo on Business {
+  name
+  id
+  rating
+  review_count
+  photos
+}
+```
+
+Both queries produce identical results; the fragment version is easier to update when you need to add or remove fields.
+
+---
+
+## Localization
+
+GraphQL localization works differently from the REST API. Instead of a query parameter, you pass the locale as an `Accept-Language` HTTP header on your request.
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/graphql" \
+  -H "Accept-Language: en_US" \
+  https://api.yelp.com/v3/graphql \
+  --data '
+{
+  business(id: "garaje-san-francisco") {
+    name
+    url
+  }
+}'
+```
+
+<Note>
+  The `Accept-Language` header is optional. If you omit it, the API defaults to `en_US`. You may only specify **one locale per request** — providing multiple locales returns a `400 Bad Request` with error code `INVALID_LOCALE`. The GraphQL API supports the [same locales](https://docs.developer.yelp.com/docs/resources-supported-locales) as the REST Places API.
+</Note>
+
+---
+
+## Interactive GraphQL Explorer
+
+You can build and test queries interactively — including browsing the full schema — using the Yelp GraphQL editor. Pass your API key as a Bearer token in the editor's **Headers** section to authenticate your queries.
+
+<Card title="Open the Interactive GraphQL Editor" icon="bolt" href="https://docs.developer.yelp.com/graphql">
+  Explore the full Yelp GraphQL schema, run live queries, and inspect response shapes — all in your browser.
+</Card>

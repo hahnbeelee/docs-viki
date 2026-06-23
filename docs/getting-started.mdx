@@ -1,0 +1,117 @@
+---
+title: "Get Started with the Yelp Places API"
+sidebarTitle: "Quick Start"
+description: "Choose a plan, create your app, obtain an API key, and make your first Yelp Places API call in just a few minutes."
+---
+
+The Yelp Places API lets you search millions of businesses by keyword, category, location, and price level — and retrieve rich details like ratings, photos, hours, and reviews. This guide walks you through everything you need to go from zero to your first successful API response.
+
+<Steps>
+  <Step title="Choose a plan and sign up">
+    Visit [business.yelp.com/data/products/places-api](https://business.yelp.com/data/products/places-api/) to select a plan that fits your needs.
+
+    - **Trial / Starter** — Free, 5,000 calls per 30 days. Great for development and prototyping.
+    - **Paid plans** — Start at 30,000 calls per month (5,000 per day) with Enhanced or Premium attributes.
+
+    <Tip>
+      You can upgrade or change your plan at any time from your account dashboard without re-creating your app.
+    </Tip>
+  </Step>
+
+  <Step title="Create your app and get your API key">
+    After selecting a plan, you'll be prompted to create a new application:
+
+    1. Fill in the **Create New App** form with your application name, description, and website URL.
+    2. Agree to the [Yelp API Terms of Use](https://www.yelp.com/developers/api_terms) and Display Requirements.
+    3. Click **Submit**. Your private API key is generated immediately and shown on the [Manage App](https://www.yelp.com/developers/v3/manage_app) page.
+
+    <Warning>
+      Keep your API key private. Do not commit it to public source control or expose it in client-side code. It is the sole credential authorizing calls on your behalf.
+    </Warning>
+  </Step>
+
+  <Step title="Authenticate with your Bearer token">
+    Every request to the Yelp Places API must include your API key as a Bearer token in the `Authorization` header:
+
+    ```bash
+    Authorization: Bearer YOUR_API_KEY
+    ```
+
+    Replace `YOUR_API_KEY` with the key from your Manage App page. See the [Authentication guide](/docs/authentication) for full details.
+  </Step>
+
+  <Step title="Make your first API call">
+    Use the Business Search endpoint to find delis near San Francisco. Replace `YOUR_API_KEY` with your actual key:
+
+    ```bash
+    curl --request GET \
+      --url "https://api.yelp.com/v3/businesses/search?term=delis&location=San+Francisco%2C+CA&limit=3" \
+      --header "Authorization: Bearer YOUR_API_KEY" \
+      --header "accept: application/json"
+    ```
+
+    A successful response returns a JSON object with a `businesses` array and a `total` count:
+
+    ```json
+    {
+      "total": 1316,
+      "businesses": [
+        {
+          "id": "molinari-delicatessen-san-francisco",
+          "name": "Molinari Delicatessen",
+          "rating": 4.5,
+          "price": "$$",
+          "phone": "+14154212337",
+          "review_count": 910,
+          "url": "https://www.yelp.com/biz/molinari-delicatessen-san-francisco",
+          "categories": [
+            {
+              "alias": "delis",
+              "title": "Delis"
+            }
+          ],
+          "location": {
+            "address1": "373 Columbus Ave",
+            "city": "San Francisco",
+            "state": "CA",
+            "zip_code": "94133",
+            "country": "US"
+          },
+          "coordinates": {
+            "latitude": 37.7983818054199,
+            "longitude": -122.407821655273
+          },
+          "image_url": "http://s3-media4.fl.yelpcdn.com/bphoto/6He-NlZrAv2mDV-yg6jW3g/o.jpg"
+        }
+      ]
+    }
+    ```
+  </Step>
+</Steps>
+
+## What to Build Next
+
+Now that you have a working API key and can fetch business data, explore the full capabilities of the Places API:
+
+<CardGroup cols={2}>
+  <Card title="Business Search" icon="magnifying-glass" href="/docs/places/business-search">
+    Search by keyword, category, location, price level, and more. Supports
+    pagination up to 240 results per query.
+  </Card>
+  <Card title="Business Details" icon="circle-info" href="/docs/places/business-details">
+    Fetch rich business data including hours, photos, and all available
+    plan attributes for a specific business.
+  </Card>
+  <Card title="Authentication" icon="key" href="/docs/authentication">
+    Deep-dive into API key auth, OAuth 2.0 for Partner APIs, and how to
+    refresh a compromised key.
+  </Card>
+  <Card title="Rate Limits" icon="gauge" href="/docs/rate-limiting">
+    Learn about QPS and daily limits, and how to read rate-limit headers
+    in every response.
+  </Card>
+</CardGroup>
+
+## Code Samples
+
+Community-maintained code samples for Node.js, Python, Ruby, and other languages are available at [Yelp Places Code Samples on GitHub](https://github.com/Yelp/yelp-fusion#code-samples).

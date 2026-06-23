@@ -1,0 +1,112 @@
+---
+title: "Yelp Partner APIs: Access Advanced Business Features"
+sidebarTitle: "Overview"
+description: "Partner APIs give contracted Yelp partners programmatic access to advertising, leads, reporting, and listing-management features not available in the public API."
+---
+
+Yelp Partner APIs are a suite of specialized APIs that go beyond what the public Yelp Places API offers. They let you create and manage advertising programs, receive and respond to customer leads, retrieve business performance metrics, ingest listing data, manage business subscriptions, and more. Access is **not self-serve** — each API requires a separate agreement with Yelp and explicit enablement by your Yelp account team before you can make calls. If you are unsure which APIs your organization has access to, reach out to your company's business development or partnership team.
+
+<Warning>
+  Do **not** make calls to a Partner API endpoint your account has not been
+  enabled for. Each API requires its own set of credentials or setup. Calling
+  an endpoint you don't have rights to will return an authorization error.
+</Warning>
+
+## Becoming a Partner
+
+If you are not yet a Yelp partner, visit the appropriate page below based on your intended use case:
+
+| Partnership Type | URL |
+|---|---|
+| Advertising agency | [business.yelp.com/partners](https://business.yelp.com/partners) |
+| Data licensing (Insights, Places, or AI API) | [business.yelp.com/data/products/](https://business.yelp.com/data/products/) |
+| Listing management | [business.yelp.com/partners/listing-management-partners](https://business.yelp.com/partners/listing-management-partners) |
+
+If you are already an official partner with questions, email your Yelp representative directly.
+
+## Authentication Methods
+
+Partner APIs use three distinct authentication mechanisms depending on the API and the action being performed. Make sure you understand which method each API requires before building your integration.
+
+<AccordionGroup>
+  <Accordion title="Basic HTTP Authentication (username / password)">
+    Most APIs hosted at `https://partner-api.yelp.com` use **Basic HTTP Authentication over SSL**. You supply a `username:password` pair encoded in the `Authorization` header of every request.
+
+    Each API — Ads API, Data Ingestion API, and others — requires its own **separate** set of credentials. Your credentials are provisioned by your Yelp account team and should be stored securely; do not commit them to source control.
+
+    ```bash
+    curl -X POST \
+      --user "{username}:{password}" \
+      https://partner-api.yelp.com/v1/reseller/program/create
+    ```
+  </Accordion>
+
+  <Accordion title="Yelp Places API Key (Bearer token)">
+    Newer Partner APIs — including the **Reporting API** — use the same API Key as the public Yelp Places API. You pass it as a `Bearer` token in the `Authorization` header.
+
+    Your Yelp Fusion client must be **separately enabled** for each Partner API that uses this method. Work with your Yelp representative to enable access.
+
+    ```bash
+    curl -X POST \
+      -H "Authorization: Bearer {your_api_key}" \
+      -H "Content-Type: application/json" \
+      https://api.yelp.com/v3/reporting/businesses/daily
+    ```
+  </Accordion>
+
+  <Accordion title="OAuth 2.0 Authorization Code">
+    The **Leads API** and **Respond to Reviews API** use Yelp's OAuth 2.0 Authorization Code flow. This flow lets your application act on behalf of a specific business owner — for example, reading and replying to customer leads.
+
+    Key token lifetimes to be aware of:
+
+    | Token | Lifetime |
+    |---|---|
+    | Authorization Code | 5 minutes |
+    | Access Token | 7 days |
+    | Refresh Token | 365 days |
+
+    You must register with Yelp to receive a `client_id` and `client_secret`. Your redirect URI(s) must be HTTPS endpoints and must be allowlisted by Yelp before the flow will work.
+
+    ```bash
+    # Step 1 – Redirect the business user to Yelp's auth page
+    GET https://biz.yelp.com/oauth2/authorize
+      ?client_id={client_id}
+      &redirect_uri={redirect_uri}
+      &response_type=code
+      &scope=leads
+      &state={unique_state_string}
+
+    # Step 3 – Use the access token
+    curl -X GET \
+      -H "Authorization: Bearer {access_token}" \
+      https://api.yelp.com/v3/leads/{lead_id}
+    ```
+
+    <Note>
+      Yelp must explicitly enable your application for each OAuth scope you request (`leads`, `r2r`, etc.). Do not request scopes that have not been granted to your client.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## Available Partner APIs
+
+<CardGroup cols={2}>
+  <Card title="Ads API" icon="rectangle-ad" href="/partner/ads-api">
+    Create, modify, and terminate Yelp advertising programs (CPC, Enhanced Profile, Branded Profile, and more) on behalf of your advertisers.
+  </Card>
+  <Card title="Leads API" icon="envelope-open-text" href="/partner/leads-api">
+    Receive real-time webhook notifications for new Request-a-Quote leads and reply to consumers directly from your platform.
+  </Card>
+  <Card title="Reporting API" icon="chart-line" href="/partner/reporting-api">
+    Retrieve daily or monthly business and advertiser metrics — page views, calls, ad clicks, ad spend, and more — for up to 500 businesses per request.
+  </Card>
+  <Card title="Data Ingestion API" icon="database" href="/partner/data-ingestion">
+    Push listing data (hours, photos, menu, specialties) from your system of record into Yelp business profiles.
+  </Card>
+  <Card title="Business Subscriptions API" icon="bell" href="/partner/business-subscriptions">
+    Subscribe to and manage webhook notifications for specific Yelp business IDs.
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/partner/webhooks">
+    Learn how Yelp delivers real-time event notifications to your endpoint for leads, phone opt-ins, and more.
+  </Card>
+</CardGroup>

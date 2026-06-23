@@ -1,0 +1,177 @@
+---
+title: "Frequently Asked Questions About the Yelp API"
+sidebarTitle: "FAQ"
+description: "Answers to the most common questions about Yelp Places API access, rate limits, caching, review data, business matching, and GraphQL."
+---
+
+This page collects answers to the most common questions developers ask when building with the Yelp Places API. If you can't find what you're looking for here, you can open a discussion on the [Yelp Fusion GitHub page](https://github.com/Yelp/yelp-fusion/issues) or reach out to [data-licensing@yelp.com](mailto:data-licensing@yelp.com).
+
+---
+
+## Getting Started
+
+<AccordionGroup>
+  <Accordion title="How do I get started with the Yelp Places API?">
+    Getting started is straightforward. Visit the [sign-up page](https://business.yelp.com/data/products/places-api/) to browse available plans, select the one that fits your needs, and receive your API key.
+
+    You need a standard Yelp user account to sign up — not a Yelp Business Owner Account. If you don't have a consumer account yet, create one on the [registration page](https://www.yelp.com/signup). If you are currently logged in to a [Yelp Business Owner account](https://biz.yelp.com/), please log out before signing up for the API.
+  </Accordion>
+
+  <Accordion title="How many API requests do I receive?">
+    Your quota depends on your plan:
+
+    - **Trial Plan:** Up to **5,000 free API calls** during a 30-day evaluation period. These calls are **strictly for evaluation and not for commercial deployment**.
+    - **Paid Plans:** Your plan includes **30,000 API calls per month** by default, with a **daily limit of 5,000 calls**. Usage beyond 30,000 calls per month is billed in increments of 1,000 calls.
+
+    If you need a higher daily quota, [book a meeting with the sales team](https://business.yelp.com/data/#form). For more than 150,000 monthly calls, submit the [Enterprise form](https://fusion.yelp.com/enterprise/apply/).
+  </Accordion>
+
+  <Accordion title="How much does the Yelp Places API cost?">
+    Yelp offers multiple pricing tiers. Full pricing details are available on the [sign-up page](https://business.yelp.com/data/products/places-api/). You can also [contact the sales team](https://business.yelp.com/data/#form) for a custom quote. See the [Plans](/docs/resources/plans) page for a complete breakdown of what each tier includes.
+  </Accordion>
+
+  <Accordion title="How do I transition from a trial to a commercial license?">
+    From the [payment page](https://www.yelp.com/developers/v3/payment), you can upgrade your account to a paid plan at any time before or after your trial expires. Once upgraded, your plan includes 30,000 calls/month with a 5,000 call daily limit, and usage overages are billed per 1,000 calls.
+  </Accordion>
+
+  <Accordion title="What can I do if I want to purchase a different plan than the one I'm trialing?">
+    There is currently no self-serve way to switch plans mid-trial. You have two options:
+
+    1. Email [data-licensing@yelp.com](mailto:data-licensing@yelp.com) and the team can help change your plan.
+    2. Sign up for the new plan using a different Yelp consumer account.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Rate Limits & Quotas
+
+<AccordionGroup>
+  <Accordion title="What happens if I exceed my daily limit?">
+    Any requests made after you've hit your daily cap will return a `429 Too Many Requests` error with the `ACCESS_LIMIT_REACHED` error code. Daily limits reset at **midnight UTC** every day.
+
+    If you are on the trial and consistently hitting limits, consider [upgrading to a paid plan](https://www.yelp.com/developers/v3/payment). If you need more than 150,000 calls per month, [book a meeting with sales](https://business.yelp.com/data/#form).
+  </Accordion>
+
+  <Accordion title="How can I check how many API calls I have remaining?">
+    You can view your remaining quota on the [Manage App page](https://www.yelp.com/developers/v3/manage_app). Additionally, every API response includes headers that show your current usage. See the [Rate Limiting documentation](/docs/fusion-rate-limiting) for the exact header names.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Data, Caching & Usage Policy
+
+<AccordionGroup>
+  <Accordion title="Can I cache data from the API?">
+    Yes, with limits. You may cache Yelp Places API content for a maximum of **24 hours**. The one exception is Yelp Business IDs — those can be stored **indefinitely** and are the recommended way to reference a business persistently in your own database.
+  </Accordion>
+
+  <Accordion title="Can my organization commercially analyze data from the API?">
+    No. Commercial data analysis is not permitted under the Yelp Places API terms. If your use case involves data analytics or business intelligence, visit the [Yelp Insights API](https://business.yelp.com/data/products/insights-api/) page to learn about supported analytics use cases.
+  </Accordion>
+
+  <Accordion title="Why does the API not return some businesses I can find on Yelp.com?">
+    The Yelp Places API only returns businesses that have Yelp user-generated content attached to them. Specifically, a listing must have at least one review, photo, or other user-contributed enhancement before it appears in API results. Newly created or unclaimed businesses with no user activity will not be returned.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Review & Photo Data
+
+<AccordionGroup>
+  <Accordion title="Can I get the full text of Yelp reviews?">
+    No. The Yelp Places API does not return full review text. By default, the [Reviews endpoint](/reference/v3_business_reviews) returns up to **three review excerpts per business**, each approximately 160 characters long. The selection and ordering of excerpts is determined by Yelp based on recency, user voting, and other quality signals — you cannot configure which reviews are returned or in what order.
+  </Accordion>
+
+  <Accordion title="What image resolution options are available?">
+    By default, the API returns the original full-resolution image (up to 1,000×1,000 px). You can request different sizes by changing the suffix in the image URL:
+
+    | Suffix | Name | Maximum Size |
+    |---|---|---|
+    | `o` | Original | 1,000 × 1,000 px |
+    | `l` | Large | 600 × 400 px |
+    | `m` | Medium | 100 × 100 px |
+    | `ms` | Medium Square | 100 × 100 px |
+    | `s` | Small | 40 × 40 px |
+    | `ss` | Small Square | 40 × 40 px |
+
+    Keep in mind that actual dimensions may vary because users upload images at different original resolutions.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Business Identification
+
+<AccordionGroup>
+  <Accordion title="What's the difference between a business ID and a business alias?">
+    Every Yelp business has both:
+
+    - **Business ID** — An opaque unique identifier, for example `4kMBvIEWPxWkWKFN__8SxQ`. Compact and guaranteed to be URL-safe.
+    - **Business alias** — A human-readable slug, for example `yelp-san-francisco`. Easier to read but potentially longer and may contain Unicode characters.
+
+    Both values are interchangeable for identifying a business across endpoints. Because the alias can contain Unicode, **using the business ID is recommended** whenever you need to store or pass the identifier programmatically.
+  </Accordion>
+
+  <Accordion title="What's the best way to find a specific business?">
+    The right matching approach depends on what data you already have:
+
+    - **Name + address** → use the [Business Match API](/reference/v3_business_match)
+    - **Phone number** → use the [Phone Search API](/reference/v3_business_phone_search)
+    - **Partial name / keyword** → use the [Autocomplete API](/reference/v3_autocomplete) to surface suggestions for businesses, categories, and keywords in real time
+  </Accordion>
+
+  <Accordion title="How do I filter results by country?">
+    The Places API returns results from every geography where Yelp operates. To restrict results to a specific city or region, always include the `location` parameter in your [Business Search](/reference/v3_business_search) request. For example, `location=Paris,FR` narrows results to Paris, France.
+  </Accordion>
+
+  <Accordion title="How do I get more than 240 results for a search query?">
+    The Business Search endpoint returns up to **240 total results** per originating query and up to **50 results per request**. Use the `offset` parameter to page through results:
+
+    ```text
+    limit=50&offset=0   → results 1–50
+    limit=50&offset=50  → results 51–100
+    limit=50&offset=100 → results 101–150
+    ```
+
+    The maximum `offset` you can reach is 190 (returning results 191–240).
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Localization
+
+<AccordionGroup>
+  <Accordion title="What locales does the Yelp Places API support?">
+    The API supports **42 locales** spanning 26 countries. Pass the `locale` parameter (format: `{language_code}_{country_code}`) in your request to receive localized category names and region-appropriate results. See the full list on the [Supported Locales](/docs/resources/supported-locales) page.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## GraphQL API
+
+<AccordionGroup>
+  <Accordion title="What is Yelp's GraphQL API?">
+    GraphQL is a query language that lets you specify exactly the fields you want in your API request and receive only those fields in the response — nothing more, nothing less. The Yelp GraphQL API gives you this fine-grained control over Yelp business data.
+
+    To learn more, read the [GraphQL introduction page](/docs/graphql-intro) or the [Yelp engineering blog post](https://engineeringblog.yelp.com/2017/05/introducing-yelps-local-graph.html) announcing the feature.
+  </Accordion>
+
+  <Accordion title="How do I get access to the GraphQL API beta?">
+    GraphQL is part of the Yelp Developer Beta program, which gives developers early access to new and experimental features. To join, go to the [Manage App](https://www.yelp.com/developers/v3/manage_app) page and click the **Join** button in the Developer Beta section.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Branding & Display
+
+<AccordionGroup>
+  <Accordion title="Where can I get high-resolution Yelp star and logo assets?">
+    Official brand assets — including stars, logos, and usage guidelines — are available on the [Yelp Display Requirements](https://www.yelp.com/developers/display_requirements) page and the [Yelp Brand](https://yelp.com/brand) website. Always follow Yelp's display requirements when showing Yelp content in your application.
+  </Accordion>
+</AccordionGroup>

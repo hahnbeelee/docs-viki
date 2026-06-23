@@ -1,0 +1,160 @@
+---
+title: "GET /v3/events/featured — Get Featured Local Event"
+sidebarTitle: "Featured Event"
+description: "Retrieve the single featured Yelp event for a given location. Featured events are handpicked by Yelp's community managers for local relevance."
+---
+
+The Featured Event endpoint returns the one event that Yelp's community managers have highlighted for a specific location. Unlike Events Search — which returns a ranked list — this endpoint returns a single curated event, making it ideal for hero placements or "happening near you" spotlight sections in your app. You must supply either a `location` string or a coordinate pair to identify the target area.
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/events/featured
+```
+
+<Note>
+  Authenticate all requests with your private API Key in the `Authorization` header: `Authorization: Bearer YOUR_API_KEY`.
+</Note>
+
+## Query Parameters
+
+<ParamField query="location" type="string">
+  A string describing the target area (e.g., `"Chicago, IL"`). Required if `latitude` and `longitude` are not provided.
+</ParamField>
+
+<ParamField query="latitude" type="number">
+  Latitude of the target area. Required if `location` is not provided. Must be paired with `longitude`.
+</ParamField>
+
+<ParamField query="longitude" type="number">
+  Longitude of the target area. Required if `location` is not provided. Must be paired with `latitude`.
+</ParamField>
+
+<ParamField query="locale" type="string">
+  Locale code for the response language (e.g., `en_US`, `fr_FR`). Defaults to `en_US`.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/events/featured?location=Chicago,IL" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "id": "chicago-lakeshore-jazz-festival",
+  "name": "Lakeshore Jazz Festival",
+  "description": "Three stages, 40+ performers, and lakefront views. Chicago's biggest annual jazz celebration returns for its 20th year.",
+  "url": "https://www.yelp.com/events/chicago-lakeshore-jazz-festival",
+  "time_start": "2024-09-07 12:00",
+  "time_end": "2024-09-07 22:00",
+  "is_free": false,
+  "is_canceled": false,
+  "is_official": true,
+  "attending_count": 842,
+  "interested_count": 1503,
+  "category": "music",
+  "business_id": "grant-park-chicago",
+  "image_url": "https://s3-media2.fl.yelpcdn.com/event/jazzfest/o.jpg",
+  "tickets_url": "https://tickets.example.com/jazz-fest",
+  "cost": 25.00,
+  "cost_max": 75.00,
+  "location": {
+    "address1": "337 E Randolph St",
+    "address2": "",
+    "address3": "",
+    "city": "Chicago",
+    "state": "IL",
+    "zip_code": "60601",
+    "country": "US",
+    "display_address": ["337 E Randolph St", "Chicago, IL 60601"],
+    "cross_streets": "Columbus Dr"
+  }
+}
+```
+
+## Response Fields
+
+The featured event endpoint returns a single event object with the same schema used by the [Events Search](/reference/events-search) and [Event Details](/reference/event-details) endpoints.
+
+<ResponseField name="id" type="string">
+  Unique Yelp event identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the featured event.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Full event description.
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Canonical URL to the event's Yelp page.
+</ResponseField>
+
+<ResponseField name="time_start" type="string">
+  Event start time in `YYYY-MM-DD HH:MM` format (local time).
+</ResponseField>
+
+<ResponseField name="time_end" type="string">
+  Event end time. May be `null` if no end time is set.
+</ResponseField>
+
+<ResponseField name="is_free" type="boolean">
+  Whether the event is free to attend.
+</ResponseField>
+
+<ResponseField name="is_canceled" type="boolean">
+  Whether the event has been canceled.
+</ResponseField>
+
+<ResponseField name="is_official" type="boolean">
+  Whether the event is officially sponsored by Yelp.
+</ResponseField>
+
+<ResponseField name="attending_count" type="integer">
+  Number of Yelp users attending.
+</ResponseField>
+
+<ResponseField name="interested_count" type="integer">
+  Number of Yelp users interested.
+</ResponseField>
+
+<ResponseField name="category" type="string">
+  Event category alias.
+</ResponseField>
+
+<ResponseField name="business_id" type="string">
+  Yelp business ID of the host venue, if associated.
+</ResponseField>
+
+<ResponseField name="image_url" type="string">
+  Cover image URL for the event.
+</ResponseField>
+
+<ResponseField name="cost" type="number">
+  Minimum ticket price. `null` for free events.
+</ResponseField>
+
+<ResponseField name="cost_max" type="number">
+  Maximum ticket price. `null` if not applicable.
+</ResponseField>
+
+<ResponseField name="tickets_url" type="string">
+  External ticketing URL. `null` for free or unticketed events.
+</ResponseField>
+
+<ResponseField name="location" type="object">
+  Structured venue address with `address1`, `city`, `state`, `zip_code`, `country`, and `display_address`.
+</ResponseField>
+
+<Tip>
+  The featured event is selected by Yelp's community managers, not algorithmically — it may not always be the most popular or nearest event. Consider combining this with Events Search results for a richer events experience.
+</Tip>

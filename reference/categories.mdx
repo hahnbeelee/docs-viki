@@ -1,0 +1,144 @@
+---
+title: "GET /v3/categories — Browse Yelp Business Categories"
+sidebarTitle: "Categories"
+description: "Retrieve all Yelp business categories or look up a specific category by alias. Supports locale filtering for international category names and hierarchies."
+---
+
+Yelp's category system organizes millions of businesses into a structured taxonomy. The Categories endpoints give you two ways to access this data: fetch the complete category list (useful for building filters or autocomplete) or look up a single category by its alias (useful for rendering category details or breadcrumbs). Categories include parent-child relationships, locale restrictions, and both an alias (URL-safe identifier) and a human-readable title.
+
+---
+
+## Endpoint 1 — Get All Categories
+
+```
+GET https://api.yelp.com/v3/categories
+```
+
+Returns the full Yelp category list across all locales.
+
+<Note>
+  Authenticate all requests with your private API Key in the `Authorization` header: `Authorization: Bearer YOUR_API_KEY`.
+</Note>
+
+### Query Parameters
+
+<ParamField query="locale" type="string">
+  Return category titles in a specific locale (e.g., `fr_FR`, `de_DE`). Defaults to `en_US`. Does not filter which categories are returned — only the display `title` is translated.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/categories?locale=en_US" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "categories": [
+    {
+      "alias": "pizza",
+      "title": "Pizza",
+      "parent_aliases": ["restaurants"],
+      "country_allowlist": [],
+      "country_blacklist": []
+    },
+    {
+      "alias": "coffee",
+      "title": "Coffee & Tea",
+      "parent_aliases": ["food"],
+      "country_allowlist": [],
+      "country_blacklist": []
+    }
+  ]
+}
+```
+
+---
+
+## Endpoint 2 — Get Category by Alias
+
+```
+GET https://api.yelp.com/v3/categories/{alias}
+```
+
+Returns detailed information for a single category identified by its alias.
+
+### Path Parameters
+
+<ParamField path="alias" type="string" required>
+  The category alias to look up (e.g., `pizza`, `coffee`, `auto`). Aliases are lowercase, URL-safe strings. You can discover aliases from the full category list or the [category resource page](/docs/resources-categories).
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="locale" type="string">
+  Return the category `title` in a specific locale. Defaults to `en_US`.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/categories/pizza" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "category": {
+    "alias": "pizza",
+    "title": "Pizza",
+    "parent_aliases": ["restaurants"],
+    "country_allowlist": [],
+    "country_blacklist": []
+  }
+}
+```
+
+---
+
+## Response Fields
+
+<ResponseField name="categories" type="array">
+  Array of category objects (present when calling the all-categories endpoint).
+</ResponseField>
+
+<ResponseField name="category" type="object">
+  Single category object (present when calling the by-alias endpoint).
+</ResponseField>
+
+<Expandable title="Category object fields">
+  <ResponseField name="alias" type="string">
+    URL-safe unique identifier for the category (e.g., `"pizza"`). Use this value in Business Search `categories` filters.
+  </ResponseField>
+
+  <ResponseField name="title" type="string">
+    Human-readable display name of the category, localized to the requested `locale`.
+  </ResponseField>
+
+  <ResponseField name="parent_aliases" type="array">
+    List of parent category aliases in the hierarchy (e.g., `["restaurants"]` for `pizza`). Empty array if the category is a top-level root.
+  </ResponseField>
+
+  <ResponseField name="country_allowlist" type="array">
+    If non-empty, this category is only available in the listed ISO 3166-1 alpha-2 country codes. Empty array means the category is available globally.
+  </ResponseField>
+
+  <ResponseField name="country_blacklist" type="array">
+    List of country codes where this category is explicitly **not** available. Empty array means no country restrictions apply.
+  </ResponseField>
+</Expandable>
+
+<Tip>
+  Cache the full category list locally — it changes infrequently. Refresh your cache weekly or when you detect an unknown alias in a Business Search response.
+</Tip>

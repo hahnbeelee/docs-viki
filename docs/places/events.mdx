@@ -1,0 +1,284 @@
+---
+title: "Find Local Events with the Yelp Events API"
+sidebarTitle: "Events"
+description: "Search, filter, and retrieve local events using the Yelp Events API. Find free events, featured picks, and full event details by location."
+---
+
+The Yelp Events API lets you discover and display local happenings — concerts, festivals, community gatherings, and more — directly in your application. You can search for events by location, date range, category, or price, look up detailed event information by ID, or surface the single featured event Yelp's community managers have highlighted for a given area. Events are separate from business listings and use their own category taxonomy.
+
+<Note>
+  Event categories are **distinct from business categories**. Do not use business category aliases when filtering events. Refer to the event-specific categories available through the API.
+</Note>
+
+---
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v3/events` | Search for events matching your filters. |
+| `GET` | `/v3/events/{event_id}` | Retrieve full details for a specific event. |
+| `GET` | `/v3/events/featured` | Get the featured event for a given location. |
+
+---
+
+## GET /v3/events
+
+Search for events using a combination of location, date, category, and other filters. Results are paginated and support offset-based navigation.
+
+### Parameters
+
+<ParamField query="location" type="string">
+  A string representing the location to search near, such as `"San Francisco, CA"` or a ZIP code. Either `location` or both `latitude` and `longitude` are required.
+</ParamField>
+
+<ParamField query="latitude" type="number">
+  Latitude of the search origin. Required if `location` is not provided. Must be paired with `longitude`.
+</ParamField>
+
+<ParamField query="longitude" type="number">
+  Longitude of the search origin. Required if `location` is not provided. Must be paired with `latitude`.
+</ParamField>
+
+<ParamField query="radius" type="integer">
+  Search radius in meters. Maximum value is `40000` (approximately 25 miles). Defaults to a location-based radius when omitted.
+</ParamField>
+
+<ParamField query="categories" type="string">
+  Filter results to specific event categories. Provide a comma-separated list of category filter aliases (e.g., `music,food`). Note that event categories differ from business categories.
+</ParamField>
+
+<ParamField query="is_free" type="boolean">
+  When set to `true`, returns only free events. Omit or set to `false` to return all events regardless of cost.
+</ParamField>
+
+<ParamField query="start_date" type="integer">
+  Unix timestamp representing the earliest start date for returned events. Only events starting on or after this time are included.
+</ParamField>
+
+<ParamField query="end_date" type="integer">
+  Unix timestamp representing the latest start date for returned events. Only events starting on or before this time are included.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Maximum number of events to return. Defaults to `20`. Maximum is `50`.
+</ParamField>
+
+<ParamField query="offset" type="integer">
+  Number of results to skip before returning matches. Use with `limit` for pagination. Defaults to `0`.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/events?location=San+Francisco%2C+CA&is_free=true&limit=5" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+Search by coordinates with a date range:
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/events?latitude=37.7749&longitude=-122.4194&start_date=1735689600&end_date=1736294400&limit=10" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Example Response
+
+```json
+{
+  "total": 47,
+  "events": [
+    {
+      "id": "yelp-san-francisco-summer-street-festival",
+      "name": "Summer Street Festival",
+      "description": "Join us for an afternoon of live music, local food vendors, and family-friendly activities along Mission Street.",
+      "event_site_url": "https://www.yelp.com/events/san-francisco-summer-street-festival",
+      "time_start": "2025-07-12 12:00:00",
+      "time_end": "2025-07-12 20:00:00",
+      "is_free": true,
+      "is_canceled": false,
+      "attending_count": 214,
+      "category": "festivals-fairs",
+      "location": {
+        "address1": "2500 Mission St",
+        "address2": "",
+        "address3": "",
+        "city": "San Francisco",
+        "state": "CA",
+        "zip_code": "94110",
+        "country": "US",
+        "display_address": ["2500 Mission St", "San Francisco, CA 94110"]
+      }
+    }
+  ]
+}
+```
+
+### Response Fields
+
+<ResponseField name="total" type="integer">
+  Total number of events matching your search criteria across all pages.
+</ResponseField>
+
+<ResponseField name="events" type="array">
+  Array of event objects matching the search query.
+
+  <Expandable title="Event object fields">
+    <ResponseField name="id" type="string">
+      Unique identifier for the event. Use this value with `GET /v3/events/{event_id}` to fetch full details.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      The display name of the event.
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      A text description of the event, which may include HTML formatting.
+    </ResponseField>
+    <ResponseField name="event_site_url" type="string">
+      URL to the event's page on Yelp. Link your users here for full event details, photos, and discussion.
+    </ResponseField>
+    <ResponseField name="time_start" type="string">
+      Date and time when the event begins, in `YYYY-MM-DD HH:MM:SS` format.
+    </ResponseField>
+    <ResponseField name="time_end" type="string">
+      Date and time when the event ends, in `YYYY-MM-DD HH:MM:SS` format. May be `null` if no end time is specified.
+    </ResponseField>
+    <ResponseField name="is_free" type="boolean">
+      `true` if the event is free to attend; `false` if tickets or payment are required.
+    </ResponseField>
+    <ResponseField name="is_canceled" type="boolean">
+      `true` if the event has been canceled. Always check this field before displaying event details to users.
+    </ResponseField>
+    <ResponseField name="attending_count" type="integer">
+      Number of Yelp users who have marked themselves as attending the event.
+    </ResponseField>
+    <ResponseField name="category" type="string">
+      The event category alias (e.g., `music`, `festivals-fairs`, `food-and-drink`). Event categories are separate from business categories.
+    </ResponseField>
+    <ResponseField name="location" type="object">
+      Physical location details for the event.
+
+      <Expandable title="Location object fields">
+        <ResponseField name="address1" type="string">Street address line 1.</ResponseField>
+        <ResponseField name="address2" type="string">Street address line 2.</ResponseField>
+        <ResponseField name="address3" type="string">Street address line 3.</ResponseField>
+        <ResponseField name="city" type="string">City name.</ResponseField>
+        <ResponseField name="state" type="string">State or province code.</ResponseField>
+        <ResponseField name="zip_code" type="string">Postal/ZIP code.</ResponseField>
+        <ResponseField name="country" type="string">Two-letter ISO country code (e.g., `US`).</ResponseField>
+        <ResponseField name="display_address" type="array">
+          Pre-formatted address lines suitable for display.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## GET /v3/events/{event_id}
+
+Retrieve the full details for a single event using its ID. You can obtain an event ID from the `/v3/events` search results or from `/v3/events/featured`.
+
+### Parameters
+
+<ParamField path="event_id" type="string" required>
+  The unique Yelp event ID (e.g., `yelp-san-francisco-summer-street-festival`).
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/events/yelp-san-francisco-summer-street-festival" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Example Response
+
+```json
+{
+  "id": "yelp-san-francisco-summer-street-festival",
+  "name": "Summer Street Festival",
+  "description": "Join us for an afternoon of live music, local food vendors, and family-friendly activities along Mission Street.",
+  "event_site_url": "https://www.yelp.com/events/san-francisco-summer-street-festival",
+  "time_start": "2025-07-12 12:00:00",
+  "time_end": "2025-07-12 20:00:00",
+  "is_free": true,
+  "is_canceled": false,
+  "attending_count": 214,
+  "category": "festivals-fairs",
+  "location": {
+    "address1": "2500 Mission St",
+    "city": "San Francisco",
+    "state": "CA",
+    "zip_code": "94110",
+    "country": "US",
+    "display_address": ["2500 Mission St", "San Francisco, CA 94110"]
+  }
+}
+```
+
+---
+
+## GET /v3/events/featured
+
+Returns the single featured event for a given location. Featured events are hand-picked by Yelp's community managers and represent the most noteworthy happening in an area at any given time.
+
+### Parameters
+
+<ParamField query="location" type="string">
+  A string describing the location to look up (e.g., `"Austin, TX"`). Either `location` or both `latitude` and `longitude` are required.
+</ParamField>
+
+<ParamField query="latitude" type="number">
+  Latitude of the target location. Must be paired with `longitude`.
+</ParamField>
+
+<ParamField query="longitude" type="number">
+  Longitude of the target location. Must be paired with `latitude`.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/events/featured?location=Austin%2C+TX" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+By coordinates:
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/events/featured?latitude=30.2672&longitude=-97.7431" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+<Tip>
+  The featured event endpoint is a great way to add a "happening now" highlight card to your app's home screen or location detail page. Refresh it daily to keep content current.
+</Tip>
+
+---
+
+## Putting It All Together
+
+<Steps>
+  <Step title="Search for events near a location">
+    Call `GET /v3/events` with a `location` or latitude/longitude pair. Apply filters like `is_free`, `categories`, or a date range to narrow results for your use case.
+  </Step>
+  <Step title="Display event cards">
+    Use the `name`, `time_start`, `is_free`, `attending_count`, and `location` fields to build a concise event card. Always check `is_canceled` before displaying.
+  </Step>
+  <Step title="Link to full details">
+    Use `event_site_url` to send users to the Yelp event page for tickets, photos, and discussion threads, or fetch the full record with `GET /v3/events/{event_id}`.
+  </Step>
+  <Step title="Feature a highlight event">
+    Call `GET /v3/events/featured` to surface the community-curated top event for any given area.
+  </Step>
+</Steps>
+
+<Warning>
+  Always render a visible indicator when `is_canceled` is `true`. Displaying a canceled event without a notice creates a poor experience for your users.
+</Warning>

@@ -1,0 +1,150 @@
+---
+title: "Yelp Developer API Changelog"
+sidebarTitle: "Changelog"
+description: "A reverse-chronological record of every addition, improvement, deprecation, and breaking change to the Yelp Developer API platform."
+---
+
+This changelog tracks all notable updates to the Yelp Developer API platform — new endpoints, feature enhancements, deprecations, and changes to rate limits or response schemas. Entries are listed in reverse-chronological order so the most recent changes appear first. Subscribe to the [Yelp Fusion GitHub repository](https://github.com/Yelp/yelp-fusion) to receive notifications about future updates.
+
+---
+
+## Entries
+
+### <span style={{color: '#16a34a'}}>✦ improved</span> — Unmasked Phone Numbers
+
+**Leads API · 2 months ago · Austin Delong**
+
+Consumer phone numbers are now available unmasked via a new `phone_number` field in the Leads API response. Previously, all phone numbers were masked for privacy. The existing `temporary_phone_number` field continues to be populated for backward compatibility and carries a far-future expiry date.
+
+<Note>
+  **Action required:** Migrate your integration to read from `phone_number` instead of `temporary_phone_number`. Eligibility applies to leads where the consumer opted in on or after August 2025.
+</Note>
+
+---
+
+### <span style={{color: '#16a34a'}}>✦ improved</span> — Fusion AI API: Reservation Support Fields Added
+
+**Fusion AI API · 12 months ago · Ankur Agrawal**
+
+Two new fields have been added to each business object in the Fusion AI API response:
+
+- `reservation_availability` — Provides live reservation slots for the business.
+- `accepts_reservations_through_yelp` — Boolean indicating whether bookings can be made directly through Yelp Guest Manager.
+
+These fields make it possible to surface real-time reservation information to users within a conversational AI flow.
+
+---
+
+### <span style={{color: '#2563eb'}}>✦ added</span> — AI-Assisted Reservations
+
+**Fusion AI API · 12 months ago · Abhiraj Butala**
+
+Users can now book restaurant tables conversationally through the Fusion AI API. The feature taps into thousands of restaurants across the US and Canada that manage reservations through Yelp Guest Manager, allowing end users to discover availability and complete a booking without leaving your conversational interface.
+
+<Tip>
+  See the [Fusion AI API reference](/reference/v2_ai_chat) for request and response schema details including the new reservation fields.
+</Tip>
+
+---
+
+### <span style={{color: '#16a34a'}}>✦ improved</span> — Fusion AI API Enhanced: Smarter Conversations & Direct Business Questions
+
+**Fusion AI API · over 1 year ago · Abhiraj Butala**
+
+The Fusion AI API has been updated with three key improvements:
+
+- **Enhanced conversational search** — More accurate natural-language interpretation of user queries.
+- **Multi-turn interactions** — The API can now maintain context across multiple conversational turns in a session.
+- **Direct business questions** — Users can ask specific questions about a business (e.g., "Does this place have outdoor seating?") and receive answers drawn from Yelp's live business data and reviews.
+
+---
+
+### <span style={{color: '#dc2626'}}>✦ deprecated</span> — Natural Language Search API Endpoint Deprecated
+
+**Places API · over 1 year ago · Abhiraj Butala**
+
+The Natural Language Search API endpoint is now deprecated. All conversational search capabilities have been superseded by the Fusion AI API, which offers improved accuracy, multi-turn support, and direct business Q&A.
+
+<Warning>
+  **Migration required:** Transition your integration to the [Fusion AI API](/reference/v2_ai_chat) as soon as possible. The Natural Language Search endpoint will eventually be removed.
+</Warning>
+
+---
+
+### <span style={{color: '#2563eb'}}>✦ added</span> — Fusion AI API Released: Next-Generation Search & Chat
+
+**Fusion AI API · almost 2 years ago · Ankur Agrawal**
+
+The Fusion AI API is now available, delivering Yelp's trusted local content through a conversational AI interface. With a single API integration, your users can receive local business recommendations and answers through natural conversation. The endpoint is accessible to **Premium plan** subscribers with 20 included daily AI API calls.
+
+<Note>
+  Preview the experience at [yelp.com/developers/fusion-ai/chat](https://www.yelp.com/developers/fusion-ai/chat).
+</Note>
+
+---
+
+### <span style={{color: '#d97706'}}>✦ changed</span> — New Limits for Business Search Endpoint
+
+**Places API · almost 2 years ago · Sven Steinheißer**
+
+The maximum number of businesses returned by the [Business Search endpoint](/reference/v3_business_search) has been reduced for non-paying users.
+
+| Tier | Old Maximum | New Maximum |
+|---|---|---|
+| Non-paying (trial / free) | 1,000 businesses | 240 businesses |
+| Paid plans | No change | No change |
+
+This change took effect immediately. If your integration relied on retrieving more than 240 results without a paid plan, you need to upgrade or refactor your pagination logic.
+
+---
+
+### <span style={{color: '#d97706'}}>✦ changed</span> — Fusion and GraphQL Daily Rate Limits Changed
+
+**Fusion & GraphQL APIs · about 3 years ago · Sven Steinheißer**
+
+Effective **May 16, 2023**, new daily rate limits apply to both the Fusion REST API and the GraphQL API for new clients.
+
+| API | Old Daily Limit | New Daily Limit |
+|---|---|---|
+| Fusion | 5,000 | 500 |
+| GraphQL | 250,000 | 25,000 |
+
+<Note>
+  Clients created **before May 16, 2023** retain the original limits. Only accounts created on or after that date are subject to the new limits.
+</Note>
+
+For full details, see [Fusion Rate Limiting](/docs/fusion-rate-limiting) and [GraphQL Rate Limiting](/docs/graphql-rate-limiting).
+
+---
+
+### <span style={{color: '#2563eb'}}>✦ added</span> — Business Subscriptions API Published
+
+**Business Subscriptions API · over 3 years ago · Florian Traber**
+
+The Business Subscriptions API is now available. This new API consolidates three previously separate APIs into a single, easier-to-use interface:
+
+- Location Subscriptions
+- Listing Management
+- Webhooks Subscriptions
+
+Key improvements include combined endpoints, the ability to operate on multiple subscription types in one call, self-serve credential management, and improved error messages.
+
+<Warning>
+  **Deprecation notice:** The Location Subscriptions v1, Location Subscriptions v2, Listing Management, and Webhooks APIs are deprecated. They were supported through July 2023 and turned off in January 2024.
+</Warning>
+
+See the [Business Subscriptions API](/docs/business-subscriptions-api) and the [migration guide](/docs/business-subscriptions-migration-guide) for full details.
+
+---
+
+### <span style={{color: '#2563eb'}}>✦ added</span> — Reporting API v3 Published
+
+**Reporting API · over 3 years ago · Florian Traber**
+
+Reporting API v3 is now available. This release introduces:
+
+- **Easier authentication** with self-serve credential management
+- **Improved error messages** for faster troubleshooting
+- **Unchanged request/response schemas** for successful responses — existing integrations require minimal changes
+
+Request and response schemas for successful responses remain the same as v2, so the migration effort is minimal. See the [Reporting v2 to v3 Migration Guide](/docs/reporting-v2-to-v3-migration-guide) for the full changelog and step-by-step upgrade instructions.

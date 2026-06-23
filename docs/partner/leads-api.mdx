@@ -1,0 +1,273 @@
+---
+title: "Receive and Respond to Yelp Request-a-Quote Leads"
+sidebarTitle: "Leads API"
+description: "Ingest, read, and reply to Yelp Request-a-Quote leads in real time using OAuth 2.0, webhooks, and the Leads API's read and write endpoints."
+---
+
+The Yelp Leads API lets your platform become a first-class destination for Yelp's "Request A Quote" conversations. When a Yelp user submits a quote request to one of your client businesses, you receive a real-time webhook notification, fetch the full lead details, and reply on behalf of the business — all without the business owner needing to open the Yelp app or portal. You can also mark leads as read, mark them as replied when your team responds through a non-Yelp channel, and pull a historical list of lead IDs to reconcile missed webhooks.
+
+<Warning>
+  **This is a Yelp Partner API** that requires advertising or listing
+  management reseller partner status. Participation is subject to a minimum
+  spend requirement. Contact your Yelp representative or visit
+  [business.yelp.com/partners](https://business.yelp.com/partners) or
+  [business.yelp.com/data/listings/](https://business.yelp.com/data/listings/)
+  to learn more.
+</Warning>
+
+<Note>
+  The Leads API supports **"Request A Quote"** flows only. Businesses whose
+  Yelp profile uses **"Message the business"** are not eligible and must be
+  migrated to Request A Quote before you can use this API for them.
+</Note>
+
+## Requirements
+
+- Approved Yelp technology partner with OAuth credentials (`client_id`, `client_secret`)
+- Allowlisted HTTPS redirect URI(s) for the OAuth flow
+- An HTTPS endpoint capable of receiving webhook POST requests
+- Business listings must be **currently advertising on Yelp** to have leads data available
+
+## Authentication
+
+The Leads API uses **OAuth 2.0 Authorization Code** flow, which lets your platform act on behalf of a business owner. You will need to complete the OAuth setup once per business user and then keep the access token refreshed.
+
+| Token | Lifetime |
+|---|---|
+| Authorization Code | 5 minutes |
+| Access Token | 7 days |
+| Refresh Token | 365 days |
+
+For the complete OAuth setup walkthrough, see the [OAuth Authorization guide](/partner/overview#oauth-20-authorization-code). Request the `leads` scope when directing the business user to the authorization page.
+
+```bash
+GET https://biz.yelp.com/oauth2/authorize
+  ?client_id={client_id}
+  &redirect_uri={redirect_uri}
+  &response_type=code
+  &scope=leads
+  &state={unique_state_string}
+```
+
+## Rate Limits
+
+All Leads API endpoints have a default rate limit of **5 requests per second per client per endpoint**. Limits can be adjusted — contact [partner-support@yelp.com](mailto:partner-support@yelp.com) if you are consistently hitting limits during normal operation.
+
+## Integration Flow
+
+<Steps>
+  <Step title="Set Up OAuth Credentials">
+    Create a Yelp Developer App at the [Yelp Developer Portal](https://www.yelp.com/developers/v3/manage_app) and share your `client_id` and redirect URI(s) with Yelp. Yelp will issue you a `client_secret` and enable Leads API access for your app.
+
+    Implement the Authorization Code flow to obtain access tokens for each business owner account that will be using your integration.
+  </Step>
+
+  <Step title="Subscribe to Webhooks">
+    Use the access token to subscribe your HTTPS endpoint to Yelp webhook notifications.
+
+    ```bash
+    curl -X POST \
+      -H "Authorization: Bearer {access_token}" \
+      -H "Content-Type: application/json" \
+      -d '{"webhook_url": "https://yourplatform.example.com/yelp/webhooks", "webhook_type": "leads_event"}' \
+      https://api.yelp.com/v3/webhooks
+    ```
+
+    The response returns a `webhook_id` and an `expiration_date`. Webhook subscriptions **expire after 14 days** — automate the renewal process by unsubscribing and resubscribing at least one hour before expiry.
+
+    <Warning>
+      Syncing business subscriptions is an ongoing process. Yelp recommends
+      refreshing subscriptions at least once every 24 hours to ensure you
+      receive notifications for all businesses the user has access to.
+    </Warning>
+
+    To restrict notifications to specific businesses, pass an optional `restricted_business_ids` list in the subscribe request.
+  </Step>
+
+  <Step title="Receive a NEW_EVENT Webhook">
+    When a new lead or a new message on an existing lead arrives, Yelp sends a `POST` to your webhook URL. The payload contains the `lead_id` and `event_id` but **not** the full message content.
+
+    ```json
+    {
+      "time": "2022-06-09T09:41:14+00:00",
+      "object": "business",
+      "data": {
+        "id": "SoVHhx7Hel_XX0DKCLp72Q",
+        "updates": [
+          {
+            "event_type": "NEW_EVENT",
+            "event_id": "IsKxQAYZNqCjvRRmNoiCUw",
+            "lead_id": "TbvEUYEi02cmSBmqCjQbkg",
+            "interaction_time": "2022-06-09T09:41:13+00:00"
+          }
+        ]
+      }
+    }
+    ```
+
+    Return a `2XX` status code immediately. Yelp will retry delivery for up to 24 hours on non-2XX responses.
+  </Step>
+
+  <Step title="Fetch Full Lead Details">
+    Use the `lead_id` from the webhook to retrieve the complete lead record, including the consumer's display name, project details, survey answers, and masked email address.
+
+    ```bash
+    curl -X GET \
+      -H "Authorization: Bearer {access_token}" \
+      https://api.yelp.com/v3/leads/TbvEUYEi02cmSBmqCjQbkg
+    ```
+
+    The response includes a `link_to_reply_in_yelp` field if you need to deep-link the business user back to Yelp's Leads Center instead of handling the reply in your own UI.
+  </Step>
+
+  <Step title="Reply to the Lead">
+    Send a reply directly via the API (preferred) or use the `link_to_reply_in_yelp` deep link.
+
+    **Option 1 — Reply via API (recommended):**
+
+    ```bash
+    curl -X POST \
+      -H "Authorization: Bearer {access_token}" \
+      -H "Content-Type: application/json" \
+      -d '{"text": "Thanks for reaching out! We can help with that."}' \
+      https://api.yelp.com/v3/leads/TbvEUYEi02cmSBmqCjQbkg/events
+    ```
+
+    Messages sent via the API appear instantly in the Yelp app, attributed to the business name — identical to a reply the business owner sends from their own Yelp inbox.
+
+    **Option 2 — Deep link to Yelp Leads Center:**
+
+    If your platform does not support two-way messaging, redirect the business user to:
+
+    ```
+    https://biz.yelp.com/leads_center/{business_id}/leads/{lead_id}
+    ```
+
+    If you respond outside Yelp (phone, email, etc.), call `POST /v3/leads/{id}/mark_as_replied` to update the lead status in Yelp.
+  </Step>
+</Steps>
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/v3/leads/{id}` | Get full lead details (consumer info, project, masked email, phone if available) |
+| `GET` | `/v3/leads/{id}/events` | Get the full list of messages and activity for a lead |
+| `POST` | `/v3/leads/{id}/events` | Reply to a lead (write a new message into the conversation) |
+| `POST` | `/v3/leads/{id}/mark_as_replied` | Mark a lead as replied when you responded outside Yelp |
+| `POST` | `/v3/leads/{id}/events/mark_as_read` | Mark a specific event as read (only after a user reads it in your UI) |
+| `GET` | `/v3/businesses/{business_id}/lead_ids` | Get all lead IDs for a business (useful for reconciliation if webhooks are missed) |
+
+## Key Concepts
+
+<AccordionGroup>
+  <Accordion title="Leads and Events">
+    A **Lead** represents a single conversation thread between a Yelp user and a business. Every action within that conversation (a new message, a read receipt, a status change) is an **Event**. When you call `GET /v3/leads/{id}/events`, you receive the complete ordered list of events for that thread.
+  </Accordion>
+
+  <Accordion title="Masked Email Addresses">
+    The `GET /v3/leads/{id}` response includes a temporary masked email address (`temporary_email_address`) for the lead submitter. You can use this address for plain-text email communication for up to **30 days** after lead creation (the exact expiry is in the `temporary_email_address_expiry` field).
+
+    **Important constraints:**
+    - Yelp's email parser supports **plain text only**. HTML, images, PDFs, and attachments will cause parsing failures.
+    - Emails sent to the masked address appear as messages in the Yelp lead thread — avoid sending the same message via both the API and masked email to prevent duplicates.
+    - Do not use masked email addresses for marketing campaigns or review solicitation.
+  </Accordion>
+
+  <Accordion title="Deduplication via the channel Field">
+    When you receive a `NEW_EVENT` webhook for a BIZ message (i.e., `user_type = BIZ`), the `channel` field tells you how that message entered the conversation. Use this to filter out messages your own integration sent so they don't appear twice in your UI.
+
+    | `channel` value | Meaning | Action |
+    |---|---|---|
+    | `API-SELF` | Sent by your OAuth client via the Leads API | **Filter out** — you already know about this message |
+    | `SMS` | Legacy masked-number SMS flow | Filter out if your integration sent it |
+    | *(absent)* | Sent via Yelp Inbox, email, or another untracked channel | **Ingest** |
+    | *(CONSUMER event)* | Message from the consumer (`user_type = CONSUMER`) | **Always ingest** |
+
+    Contact Yelp to enable the `channel` field for your OAuth client.
+  </Accordion>
+
+  <Accordion title="Consumer Phone Sharing">
+    When enabled for your account, the `GET /v3/leads/{id}` response can include an unmasked consumer phone number in the `phone_number` field. This happens when the consumer types a phone number in the chat.
+
+    - If the consumer has already **opted in** to receiving calls: the real phone number is returned directly in `phone_number`.
+    - If the consumer has **not yet opted in** but typed a phone number: you receive a `CONSUMER_PHONE_NUMBER_AVAILABLE_EVENT` webhook, and `phone_number` is populated in the Get Lead response.
+
+    This feature must be explicitly enabled by Yelp for your OAuth client.
+  </Accordion>
+</AccordionGroup>
+
+## Webhook Event Types
+
+| Event Type | When It Fires |
+|---|---|
+| `NEW_EVENT` | A new lead was created, or a new message was added to an existing lead |
+| `CONSUMER_PHONE_NUMBER_OPT_IN_EVENT` | The consumer opted in to receiving phone calls |
+| `CONSUMER_PHONE_NUMBER_OPT_OUT_EVENT` | The consumer opted out of receiving phone calls |
+
+## Error Handling
+
+<Tabs>
+  <Tab title="Rate Limiting (429)">
+    When you exceed the per-endpoint QPS limit, the API returns `429 Too Many Requests` with the error code `TOO_MANY_REQUESTS_PER_SECOND`. Apply exponential backoff before retrying — do not immediately retry at full speed.
+
+    If you are consistently hitting rate limits during normal operation, contact [partner-support@yelp.com](mailto:partner-support@yelp.com) to request a higher limit.
+  </Tab>
+
+  <Tab title="Server Errors (500 / 503)">
+    Retry with exponential backoff up to a **maximum of 5 retries**. Monitor Yelp API status at [status.developer.yelp.com](https://status.developer.yelp.com) — subscribe to Partner APIs > Leads APIs for planned maintenance and outage notifications.
+  </Tab>
+
+  <Tab title="Auth Errors (401)">
+    Refresh your OAuth access token and retry. Access tokens expire after 7 days. Use your refresh token (valid for 365 days) to obtain a new access token without requiring the business owner to re-authorize.
+  </Tab>
+
+  <Tab title="Common 4xx Codes">
+    | Code | Error | How to Handle |
+    |---|---|---|
+    | `400` | `SAME_SUCCESSIVE_MESSAGE` | You sent an identical message to the same lead within an hour. Wait for a consumer response or send a different message. |
+    | `403` | `PARTNER_ENDPOINT_DISABLED` | This endpoint has not been enabled for your client. Contact [partner-support@yelp.com](mailto:partner-support@yelp.com). |
+    | `403` | `UNAUTHORIZED_BUSINESS_MINIMUM_ADVERTISING` | The business is not currently advertising on Yelp. Leads are only available for advertising businesses. |
+    | `404` | *(Not Found)* | The lead does not exist, or the OAuth token's business user does not have access to this business. |
+
+    Do not retry `4xx` errors without fixing the underlying request.
+  </Tab>
+</Tabs>
+
+## Frequently Asked Questions
+
+<AccordionGroup>
+  <Accordion title="What happens if my webhook endpoint is down?">
+    Yelp retries failed webhook deliveries for up to 24 hours. If your endpoint is down for longer, use `GET /v3/businesses/{business_id}/lead_ids` to reconcile any leads you may have missed. We recommend calling this endpoint at least once every 24 hours as a backstop.
+  </Accordion>
+
+  <Accordion title="How do I check if a business is eligible to use the Leads API?">
+    Call the [Get Business by ID](https://docs.developer.yelp.com/reference/v3_business_info) endpoint and inspect the `messaging` object. The business is eligible if `is_enabled: true` **and** `use_case_text` is anything other than `"Message the Business"`.
+
+    ```json
+    "messaging": {
+      "url": "https://www.yelp.com/raq/Vk7rtHcH89bvGh1GlhaeVA",
+      "use_case_text": "Request a Quote",
+      "is_enabled": true
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Do I need one OAuth token per business?">
+    No. A single access token for a business user who has access to multiple businesses covers all of those businesses. You do not need per-business tokens.
+  </Accordion>
+
+  <Accordion title="When should I call mark_as_read?">
+    Call `POST /v3/leads/{id}/events/mark_as_read` only after a real user has actually read the event in your application. Never mark an event as read automatically without user action.
+  </Accordion>
+
+  <Accordion title="When should I call mark_as_replied?">
+    Always reply to leads. If the business responds through a channel outside Yelp (phone, direct email, in-person), call `POST /v3/leads/{id}/mark_as_replied` to update the lead status. Never mark a lead as replied if no reply was actually made.
+  </Accordion>
+</AccordionGroup>
+
+## Further Reading
+
+- [Partner Integration Guide](/partner/partner-integration-guide) — detailed end-to-end setup guide including email masking, consumer phone sharing, testing, and CRM mapping
+- [Leads Webhooks](/partner/webhooks) — complete webhook subscription and renewal reference
+- [OAuth Authorization](/partner/overview#oauth-20-authorization-code) — full OAuth 2.0 Authorization Code flow walkthrough

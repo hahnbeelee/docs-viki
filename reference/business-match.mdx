@@ -1,0 +1,204 @@
+---
+title: "GET /v3/businesses/matches — Match a Business by Address"
+sidebarTitle: "Business Match"
+description: "Find the Yelp business ID for a business you know by name and address. Use this to reconcile external business data with Yelp listings."
+---
+
+The Business Match endpoint helps you find the Yelp listing that corresponds to a business you already know by name and address. This is the recommended way to reconcile external business data — such as a POS system, CRM, or third-party directory — with Yelp's business records. Providing as much input data as possible significantly improves match accuracy.
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/businesses/matches
+```
+
+## Authentication
+
+Include your API key as a Bearer token in the `Authorization` header of every request.
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Request Parameters
+
+### Required
+
+<ParamField query="name" type="string" required>
+  Business name. For best results, use the public-facing trade name (DBA) rather than a legal entity name. Avoid including store numbers, special characters (`@`, `#`, `/`), or parenthetical notes.
+</ParamField>
+
+<ParamField query="address1" type="string" required>
+  Primary street address. Do not include suite or unit numbers here; use `address2` or `address3` instead.
+</ParamField>
+
+<ParamField query="city" type="string" required>
+  City name.
+</ParamField>
+
+<ParamField query="state" type="string" required>
+  ISO 3166-2 state or province code (e.g. `"CA"`, `"NY"`).
+</ParamField>
+
+<ParamField query="country" type="string" required>
+  ISO 3166-1 alpha-2 country code (e.g. `"US"`, `"CA"`, `"GB"`).
+</ParamField>
+
+### Optional
+
+<ParamField query="address2" type="string">
+  Secondary address line, such as a suite or floor number.
+</ParamField>
+
+<ParamField query="address3" type="string">
+  Tertiary address line.
+</ParamField>
+
+<ParamField query="latitude" type="number">
+  Latitude of the business. Providing coordinates alongside an address improves match precision.
+</ParamField>
+
+<ParamField query="longitude" type="number">
+  Longitude of the business.
+</ParamField>
+
+<ParamField query="phone" type="string">
+  Business phone number. Accepts E.164 format (e.g. `"+14158683394"`) or digits only. Including a phone number can dramatically improve match quality.
+</ParamField>
+
+<ParamField query="zip_code" type="string">
+  Postal code. Providing a zip code helps distinguish businesses with similar names in the same city.
+</ParamField>
+
+<ParamField query="yelp_business_id" type="string">
+  If you already have a candidate Yelp business ID, pass it here to verify the match directly.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Maximum number of matching businesses to return. Defaults to **1**.
+</ParamField>
+
+<ParamField query="match_threshold" type="string">
+  Controls the strictness of the matching algorithm:
+  - `"none"` — return the closest match regardless of confidence
+  - `"default"` — return matches above a standard confidence threshold (default)
+  - `"strict"` — only return high-confidence matches; fewer results but higher accuracy
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url 'https://api.yelp.com/v3/businesses/matches?name=Molinari+Delicatessen&address1=373+Columbus+Ave&city=San+Francisco&state=CA&country=US&zip_code=94133' \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+```
+
+```python Python
+import requests
+
+url = "https://api.yelp.com/v3/businesses/matches"
+headers = {"Authorization": "Bearer YOUR_API_KEY"}
+params = {
+    "name": "Molinari Delicatessen",
+    "address1": "373 Columbus Ave",
+    "city": "San Francisco",
+    "state": "CA",
+    "country": "US",
+    "zip_code": "94133",
+    "match_threshold": "default"
+}
+
+response = requests.get(url, headers=headers, params=params)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const response = await axios.get(
+  "https://api.yelp.com/v3/businesses/matches",
+  {
+    headers: { Authorization: "Bearer YOUR_API_KEY" },
+    params: {
+      name: "Molinari Delicatessen",
+      address1: "373 Columbus Ave",
+      city: "San Francisco",
+      state: "CA",
+      country: "US",
+      zip_code: "94133",
+      match_threshold: "default",
+    },
+  }
+);
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "businesses": [
+    {
+      "id": "molinari-delicatessen-san-francisco",
+      "alias": "molinari-delicatessen-san-francisco",
+      "name": "Molinari Delicatessen",
+      "location": {
+        "address1": "373 Columbus Ave",
+        "address2": "",
+        "address3": "",
+        "city": "San Francisco",
+        "state": "CA",
+        "zip_code": "94133",
+        "country": "US",
+        "display_address": ["373 Columbus Ave", "San Francisco, CA 94133"]
+      }
+    }
+  ]
+}
+```
+
+## Response Fields
+
+<ResponseField name="businesses" type="array">
+  Array of matched business objects. Returns up to `limit` results (default: 1).
+
+  <Expandable title="Business match fields">
+    <ResponseField name="id" type="string">
+      Yelp business ID. Use this value with the [Business Details](/reference/business-details), [Reviews](/reference/reviews), and other endpoints.
+    </ResponseField>
+    <ResponseField name="alias" type="string">
+      URL-safe slug for the business.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Business display name as listed on Yelp.
+    </ResponseField>
+    <ResponseField name="location" type="object">
+      Address details as recorded in Yelp, which may differ slightly from your input due to normalization.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Data Quality Guidance
+
+Matching accuracy depends on how closely your input data aligns with how Yelp represents business information. Follow these guidelines to get the best results:
+
+<Warning>
+  Avoid including the following in the `name` field, as they prevent successful matching:
+  - Store numbers (e.g. `"TACO BELL #31858"`)
+  - Special characters: `@`, `#`, `/`, parentheses
+  - Legal suffixes: `LLC`, `Inc.`, `Co.`, `Group`
+  - Location tags or DBA prefixes (e.g. `"UMCo LLC DBA THE URBAN MARKET"`)
+</Warning>
+
+- **Use the DBA (trade name)** — Yelp lists businesses under their consumer-facing name, not their legal entity name.
+- **Separate joint businesses** — If a single record represents two businesses at the same address (e.g. `"AFC SUSHI / HOT WOK @ RALEYS #105"`), split them into individual lookup requests.
+- **Provide as many fields as possible** — `phone`, `zip_code`, and `latitude`/`longitude` all contribute to match scoring. The more fields you provide, the higher the confidence.
+- **Exclude non-consumer businesses** — Employee cafeterias, concession stands without clear identities, and businesses that are not consumer-facing are typically not listed on Yelp and will not match.
+
+<Tip>
+  Start with `match_threshold="default"`. If you receive too many false positives, switch to `"strict"`. If you need the closest possible result regardless of confidence, use `"none"`.
+</Tip>

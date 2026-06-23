@@ -1,0 +1,158 @@
+---
+title: "GET /v3/events/{id} — Get Yelp Event Details"
+sidebarTitle: "Event Details"
+description: "Retrieve full details for a single Yelp event by its unique ID. Returns the complete event object including description, location, timing, and attendance."
+---
+
+The Event Details endpoint retrieves the full information for a specific Yelp event. You obtain an event `id` from either the [Events Search](/reference/events-search) or [Featured Event](/reference/featured-event) endpoints and then use it here to fetch the complete event object. This is the right endpoint to call when a user taps on a specific event listing and you need to display its full details.
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/events/{id}
+```
+
+<Note>
+  Authenticate all requests with your private API Key in the `Authorization` header: `Authorization: Bearer YOUR_API_KEY`.
+</Note>
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique Yelp identifier for the event. Obtain this value from the Events Search or Featured Event endpoints.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/events/oakland-yelp-community-event-summer-block-party" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "id": "oakland-yelp-community-event-summer-block-party",
+  "name": "Summer Block Party",
+  "description": "Join the community for a free outdoor block party with live music, food trucks, and local art installations. Rain or shine — the party goes on!",
+  "url": "https://www.yelp.com/events/oakland-summer-block-party",
+  "time_start": "2024-08-15 14:00",
+  "time_end": "2024-08-15 20:00",
+  "is_free": true,
+  "is_canceled": false,
+  "is_official": false,
+  "attending_count": 134,
+  "interested_count": 287,
+  "category": "music",
+  "business_id": "the-plaza-oakland",
+  "image_url": "https://s3-media1.fl.yelpcdn.com/event/example/o.jpg",
+  "tickets_url": null,
+  "cost": null,
+  "cost_max": null,
+  "location": {
+    "address1": "1 City Plaza",
+    "address2": "",
+    "address3": "",
+    "city": "Oakland",
+    "state": "CA",
+    "zip_code": "94612",
+    "country": "US",
+    "display_address": ["1 City Plaza", "Oakland, CA 94612"],
+    "cross_streets": ""
+  }
+}
+```
+
+## Response Fields
+
+<ResponseField name="id" type="string">
+  Unique Yelp event identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the event.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Full description of the event as written by the organizer.
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Canonical URL to the event's Yelp page. Use this for deeplinks.
+</ResponseField>
+
+<ResponseField name="time_start" type="string">
+  Event start time in `YYYY-MM-DD HH:MM` format (local time).
+</ResponseField>
+
+<ResponseField name="time_end" type="string">
+  Event end time in `YYYY-MM-DD HH:MM` format. May be `null` if no end time is specified.
+</ResponseField>
+
+<ResponseField name="is_free" type="boolean">
+  `true` if this event has no ticket cost.
+</ResponseField>
+
+<ResponseField name="is_canceled" type="boolean">
+  `true` if the event has been canceled. You should surface this to end users.
+</ResponseField>
+
+<ResponseField name="is_official" type="boolean">
+  `true` if the event is officially sponsored by Yelp.
+</ResponseField>
+
+<ResponseField name="attending_count" type="integer">
+  Number of Yelp users who marked themselves as attending.
+</ResponseField>
+
+<ResponseField name="interested_count" type="integer">
+  Number of Yelp users who marked themselves as interested.
+</ResponseField>
+
+<ResponseField name="category" type="string">
+  Event category alias (e.g., `music`, `food-and-drink`, `festival`).
+</ResponseField>
+
+<ResponseField name="business_id" type="string">
+  Yelp business ID of the host venue, if the event is associated with a Yelp business listing.
+</ResponseField>
+
+<ResponseField name="image_url" type="string">
+  URL to the event's cover image.
+</ResponseField>
+
+<ResponseField name="cost" type="number">
+  Minimum ticket price in USD. Returns `null` for free events.
+</ResponseField>
+
+<ResponseField name="cost_max" type="number">
+  Maximum ticket price for tiered pricing. Returns `null` if not applicable.
+</ResponseField>
+
+<ResponseField name="tickets_url" type="string">
+  External URL to purchase tickets. Returns `null` for free or unticketed events.
+</ResponseField>
+
+<ResponseField name="location" type="object">
+  Structured venue address.
+
+  <Expandable title="Location fields">
+    <ResponseField name="address1" type="string">Street address line 1.</ResponseField>
+    <ResponseField name="address2" type="string">Street address line 2.</ResponseField>
+    <ResponseField name="address3" type="string">Street address line 3.</ResponseField>
+    <ResponseField name="city" type="string">City name.</ResponseField>
+    <ResponseField name="state" type="string">State or region code.</ResponseField>
+    <ResponseField name="zip_code" type="string">Postal code.</ResponseField>
+    <ResponseField name="country" type="string">ISO 3166-1 alpha-2 country code.</ResponseField>
+    <ResponseField name="display_address" type="array">Formatted address lines suitable for display.</ResponseField>
+    <ResponseField name="cross_streets" type="string">Nearest cross streets, if available.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Tip>
+  Always check `is_canceled` before displaying event details to users, and consider filtering canceled events in your UI.
+</Tip>

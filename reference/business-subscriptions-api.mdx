@@ -1,0 +1,192 @@
+---
+title: "Business Subscriptions API Reference"
+sidebarTitle: "Subscriptions"
+description: "Manage Yelp partner business subscriptions for data feeds, listing management, and webhook notifications. Subscribe or unsubscribe up to 500 businesses per call."
+---
+
+The Business Subscriptions API is the unified way for Yelp partners to manage which businesses they are subscribed to, and for what purpose. A single API call can update subscriptions across multiple types simultaneously. Subscriptions are **processed asynchronously** — a successful response only confirms the request was accepted, not that the subscription is active. Expect 99% of requests to be processed within 15 minutes.
+
+<Warning>
+  **Partner API — Access disabled by default.** Contact [partner-support@yelp.com](mailto:partner-support@yelp.com) with your Yelp Places Client ID and the subscription types you need to manage. Authentication uses your Yelp Places API Key (`Authorization: Bearer YOUR_API_KEY`).
+</Warning>
+
+## Subscription Types
+
+| Type | Purpose |
+|------|---------|
+| `YELP_KNOWLEDGE` | Subscribed businesses are included in your generated partner data feed (Location Subscriptions). |
+| `LISTING_MANAGEMENT` | Enables you to manage the subscribed business's Yelp listing data. |
+| `WEBHOOK` | Receive real-time webhook notifications for events on subscribed businesses. |
+
+---
+
+## GET /v3/business_subscriptions — Get Subscriptions
+
+Retrieve your current list of business subscriptions, optionally filtered by subscription type.
+
+```
+GET https://api.yelp.com/v3/business_subscriptions
+```
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/business_subscriptions?subscription_type=WEBHOOK" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "subscriptions": [
+    {
+      "business_id": "WavvLdfdP6g8aZTtbBQHTw",
+      "subscription_type": "WEBHOOK"
+    },
+    {
+      "business_id": "anotherBusinessId456",
+      "subscription_type": "WEBHOOK"
+    }
+  ],
+  "total": 2
+}
+```
+
+---
+
+## POST /v3/business_subscriptions — Subscribe to Businesses
+
+Add one or more businesses to your subscription list for one or more subscription types.
+
+```
+POST https://api.yelp.com/v3/business_subscriptions
+```
+
+### Request Body
+
+<ParamField body="business_ids" type="array" required>
+  List of encrypted Yelp business ID strings to subscribe. Use the [Business Match API](/reference/business-match) to retrieve business IDs.
+</ParamField>
+
+<ParamField body="subscription_type" type="string" required>
+  The subscription type to apply. Valid values: `YELP_KNOWLEDGE`, `LISTING_MANAGEMENT`, `WEBHOOK`.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  "https://api.yelp.com/v3/business_subscriptions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "business_ids": ["WavvLdfdP6g8aZTtbBQHTw", "anotherBusinessId456"],
+    "subscription_type": "WEBHOOK"
+  }'
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "message": "Subscription request accepted. Processing is asynchronous and may take up to 15 minutes."
+}
+```
+
+---
+
+## DELETE /v3/business_subscriptions — Unsubscribe from Businesses
+
+Remove one or more businesses from your subscription list for a specific subscription type.
+
+```
+DELETE https://api.yelp.com/v3/business_subscriptions
+```
+
+### Request Body
+
+<ParamField body="business_ids" type="array" required>
+  List of encrypted Yelp business ID strings to unsubscribe.
+</ParamField>
+
+<ParamField body="subscription_type" type="string" required>
+  The subscription type to remove. Valid values: `YELP_KNOWLEDGE`, `LISTING_MANAGEMENT`, `WEBHOOK`.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE \
+  "https://api.yelp.com/v3/business_subscriptions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "business_ids": ["WavvLdfdP6g8aZTtbBQHTw"],
+    "subscription_type": "WEBHOOK"
+  }'
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "message": "Unsubscription request accepted. Processing is asynchronous and may take up to 15 minutes."
+}
+```
+
+---
+
+## GET /v3/business_subscriptions/quota — Get Quota
+
+Retrieve your current subscription quota and usage. This endpoint is only supported for subscriptions of type `YELP_KNOWLEDGE`.
+
+```
+GET https://api.yelp.com/v3/business_subscriptions/quota
+```
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/business_subscriptions/quota" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "quota": {
+    "subscription_type": "YELP_KNOWLEDGE",
+    "allocated": 10000,
+    "used": 4237,
+    "remaining": 5763
+  }
+}
+```
+
+### Response Fields
+
+<ResponseField name="quota" type="object">
+  Quota details for the `YELP_KNOWLEDGE` subscription type.
+  <Expandable title="Quota fields">
+    <ResponseField name="subscription_type" type="string">Always `YELP_KNOWLEDGE` for this endpoint.</ResponseField>
+    <ResponseField name="allocated" type="integer">Total number of businesses you are allowed to subscribe to.</ResponseField>
+    <ResponseField name="used" type="integer">Number of businesses currently subscribed.</ResponseField>
+    <ResponseField name="remaining" type="integer">Remaining capacity before the quota limit is reached.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Note>
+  The default rate limit for all Business Subscriptions API endpoints is **5 requests per second per client per endpoint**. Requests beyond this limit return `429 Too Many Requests`. Contact Yelp to adjust your limit.
+</Note>

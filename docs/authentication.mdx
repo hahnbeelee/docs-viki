@@ -1,0 +1,93 @@
+---
+title: "Authenticate Requests to the Yelp Places API"
+sidebarTitle: "Authentication"
+description: "Learn how to authenticate Yelp API requests using API key Bearer tokens, OAuth 2.0 for Partner APIs, and basic HTTP auth."
+---
+
+Every call to the Yelp API must be authenticated. The method you use depends on which API family you are accessing. The **Yelp Places API** uses a simple private API key passed as a Bearer token — no OAuth flow required. **Yelp Partner APIs** that act on behalf of a business owner use OAuth 2.0. Older Partner APIs hosted at `partner-api.yelp.com` use HTTP Basic authentication. This page covers all three methods.
+
+---
+
+## API Key Authentication (Places API)
+
+The primary authentication method for the Yelp Places API is a private API key sent in the `Authorization` HTTP header on every request.
+
+### Obtaining your API key
+
+To get an API key you first need to create an app:
+
+1. Choose a plan at [business.yelp.com/data/products/places-api](https://business.yelp.com/data/products/places-api/).
+2. Complete the **Create New App** form, agree to the [Yelp API Terms of Use](https://www.yelp.com/developers/api_terms) and Display Requirements, then click **Submit**.
+3. Your API key is displayed immediately on the [Manage App](https://www.yelp.com/developers/v3/manage_app) page.
+
+### Making an authenticated request
+
+Set the `Authorization` header to `Bearer YOUR_API_KEY` on every request:
+
+```bash
+curl --request GET \
+  --url "https://api.yelp.com/v3/businesses/search?term=coffee&location=Seattle%2C+WA" \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "accept: application/json"
+```
+
+<Note>
+  Replace `YOUR_API_KEY` with the key shown on your Manage App page. The header
+  value must include the word `Bearer` followed by a single space before the key.
+</Note>
+
+<Warning>
+  **Keep your API key secret.** It is the sole credential granting access to
+  the API under your account. Do not embed it in public client-side code,
+  commit it to a public repository, or share it with untrusted parties.
+</Warning>
+
+### Refreshing a compromised API key
+
+If your key is exposed or compromised, you can invalidate it and generate a new one at no charge:
+
+1. Go to [Manage App](https://www.yelp.com/developers/v3/manage_app).
+2. Locate the **Refresh My API Key** section and click the **Refresh My API Key** button.
+3. Your new API key replaces the old one on the Manage App page immediately. Update all services using the old key.
+
+---
+
+## OAuth 2.0 Authorization Code (Partner APIs)
+
+Some Yelp Partner APIs — specifically those that need to act on behalf of a business owner, such as the **Leads API** and the **Respond to Reviews API** — use OAuth 2.0 Authorization Code flow. This allows your platform to request permission from a business owner and receive a scoped access token.
+
+Access to Yelp's OAuth system is reserved for contracted Yelp partners. To get set up, inquire directly with your Yelp relationship manager. Upon registration you will receive a `client_id` and a `client_secret`.
+
+Key points about this flow:
+
+- Based on [RFC 6749](https://tools.ietf.org/html/rfc6749) OAuth 2.0 Authorization Framework.
+- Yelp grants an access token after the business user logs in and grants consent.
+- The token authorizes actions such as submitting review responses on a business's behalf.
+
+<Note>
+  OAuth 2.0 is **not** required for the standard Yelp Places API. If you only
+  need to search businesses, retrieve details, or read reviews, your API key is
+  sufficient. See [Partner APIs Overview](/docs/partner/overview) for more about
+  contracted partner access.
+</Note>
+
+---
+
+## Basic HTTP Authentication (Legacy Partner APIs)
+
+Most APIs hosted at the `https://partner-api.yelp.com` subdomain — including the **Data Ingestion API** and **Ads API** — use HTTP Basic Authentication over SSL.
+
+Each Partner API requires a **separate set of credentials** (username and password). These are not the same as your Places API key and are not generated through self-serve sign-up. Your credentials are provided directly by your Yelp account team through your company's business development or partnership process.
+
+```bash
+curl --request GET \
+  --url "https://partner-api.yelp.com/v1/your-endpoint" \
+  --user "YOUR_USERNAME:YOUR_PASSWORD" \
+  --header "accept: application/json"
+```
+
+<Warning>
+  Basic HTTP Authentication credentials for Partner APIs are issued
+  per-API and per-partner. If you are unsure what credentials to use, contact
+  your Yelp account team — do not attempt to reuse your Places API key.
+</Warning>

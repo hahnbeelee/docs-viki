@@ -1,0 +1,154 @@
+---
+title: "GET /v3/businesses/search/phone — Search by Phone Number"
+sidebarTitle: "Phone Search"
+description: "Look up Yelp businesses by phone number using E.164 format. Returns all matching businesses associated with the provided number."
+---
+
+The Phone Search endpoint lets you find Yelp business listings using a phone number. This is useful when you have a phone number from an external source and need to find the corresponding Yelp listing — for example, to retrieve a Yelp business ID for use with other endpoints. Phone numbers must be provided in [E.164 format](https://en.wikipedia.org/wiki/E.164).
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/businesses/search/phone
+```
+
+## Authentication
+
+Include your API key as a Bearer token in the `Authorization` header of every request.
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Request Parameters
+
+### Required
+
+<ParamField query="phone" type="string" required>
+  Phone number to search for, in **E.164 format**. This format requires a `+` sign followed by the country code and the subscriber number, with no spaces or dashes.
+
+  Examples:
+  - `+12128343200` (US)
+  - `+442071838750` (UK)
+  - `+33140203050` (France)
+</ParamField>
+
+### Optional
+
+<ParamField query="locale" type="string">
+  Locale code to localize response content, for example `"en_US"` or `"fr_FR"`. Defaults to `"en_US"`.
+</ParamField>
+
+<Note>
+  A single phone number may be associated with multiple Yelp businesses if the same number is used across different locations (for example, a shared call center number or a franchise chain). The response may contain more than one business object.
+</Note>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url 'https://api.yelp.com/v3/businesses/search/phone?phone=%2B12128343200' \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+```
+
+```python Python
+import requests
+
+url = "https://api.yelp.com/v3/businesses/search/phone"
+headers = {"Authorization": "Bearer YOUR_API_KEY"}
+params = {"phone": "+12128343200"}
+
+response = requests.get(url, headers=headers, params=params)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const response = await axios.get(
+  "https://api.yelp.com/v3/businesses/search/phone",
+  {
+    headers: { Authorization: "Bearer YOUR_API_KEY" },
+    params: { phone: "+12128343200" },
+  }
+);
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "businesses": [
+    {
+      "id": "vu6PlPyKptsT6oEq50qOzA",
+      "alias": "carnegie-deli-new-york",
+      "name": "Carnegie Deli",
+      "url": "https://www.yelp.com/biz/carnegie-deli-new-york",
+      "phone": "+12128343200",
+      "display_phone": "(212) 834-3200",
+      "rating": 4.0,
+      "review_count": 2847,
+      "price": "$$",
+      "is_closed": false,
+      "transactions": ["pickup"],
+      "categories": [
+        { "alias": "delis", "title": "Delis" },
+        { "alias": "sandwiches", "title": "Sandwiches" }
+      ],
+      "coordinates": {
+        "latitude": 40.764666,
+        "longitude": -73.979782
+      },
+      "location": {
+        "address1": "854 7th Ave",
+        "address2": "",
+        "address3": "",
+        "city": "New York",
+        "state": "NY",
+        "zip_code": "10019",
+        "country": "US",
+        "display_address": ["854 7th Ave", "New York, NY 10019"]
+      },
+      "image_url": "https://s3-media2.fl.yelpcdn.com/bphoto/example/o.jpg"
+    }
+  ],
+  "total": 1
+}
+```
+
+## Response Fields
+
+<ResponseField name="businesses" type="array">
+  An array of business objects whose Yelp listing matches the provided phone number. The structure of each business object is identical to the [Business Search](/reference/business-search) response.
+
+  <Expandable title="Business object fields">
+    <ResponseField name="id" type="string">Unique Yelp business identifier.</ResponseField>
+    <ResponseField name="alias" type="string">URL-safe slug for the business.</ResponseField>
+    <ResponseField name="name" type="string">Business display name.</ResponseField>
+    <ResponseField name="url" type="string">URL of the Yelp business page.</ResponseField>
+    <ResponseField name="phone" type="string">Phone number in E.164 format.</ResponseField>
+    <ResponseField name="display_phone" type="string">Phone number in human-readable format.</ResponseField>
+    <ResponseField name="rating" type="number">Yelp rating from 1.0 to 5.0.</ResponseField>
+    <ResponseField name="review_count" type="integer">Total number of Yelp reviews.</ResponseField>
+    <ResponseField name="price" type="string">Price level indicator: `"$"` through `"$$$$"`.</ResponseField>
+    <ResponseField name="is_closed" type="boolean">Whether the business is permanently closed.</ResponseField>
+    <ResponseField name="transactions" type="array">Supported transaction types.</ResponseField>
+    <ResponseField name="categories" type="array">Business categories with `alias` and `title`.</ResponseField>
+    <ResponseField name="coordinates" type="object">Geographic coordinates with `latitude` and `longitude`.</ResponseField>
+    <ResponseField name="location" type="object">Full address details including `display_address`.</ResponseField>
+    <ResponseField name="image_url" type="string">URL of the business photo.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="total" type="integer">
+  Total number of businesses found matching the phone number.
+</ResponseField>
+
+<Tip>
+  Once you have a Yelp business `id` from this endpoint, pass it directly to the [Business Details](/reference/business-details) endpoint to retrieve full hours, photos, and attributes.
+</Tip>

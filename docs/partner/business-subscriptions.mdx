@@ -1,0 +1,219 @@
+---
+title: "Manage Business Subscriptions with the Yelp API"
+sidebarTitle: "Business Subscriptions"
+description: "Subscribe, unsubscribe, and manage Yelp partner business subscriptions for data feeds, listing management, and real-time webhook notifications."
+---
+
+The Business Subscriptions API is the single API for managing all of your Yelp partner business subscriptions. Instead of juggling separate endpoints for data feeds, listing permissions, and webhooks, you now use one unified API differentiated only by subscription type. You can mix and match subscription types within a single request, and all add and remove operations are processed asynchronously.
+
+<Warning>
+  **Partner API — access is disabled by default.** This API replaces the legacy Location Subscriptions v1/v2, Listing Management, and Webhooks subscription APIs — all of which were turned off in **January 2024**. To request access, send your Yelp Places Client ID and the subscription types you need to [partner-support@yelp.com](mailto:partner-support@yelp.com).
+</Warning>
+
+## Subscription Types
+
+<CardGroup cols={3}>
+  <Card title="YELP_KNOWLEDGE" icon="database">
+    Subscribed businesses appear in your partner data feed (formerly Location Subscriptions). Use this to receive bulk daily JSON data via S3.
+  </Card>
+  <Card title="LISTING_MANAGEMENT" icon="pen-to-square">
+    Grants your account permission to manage the listing attributes of subscribed businesses (name, address, hours, photos, etc.).
+  </Card>
+  <Card title="WEBHOOK" icon="bell">
+    Enables real-time HTTP POST notifications when events occur on subscribed businesses (new reviews, Data Ingestion job updates, new leads, etc.).
+  </Card>
+</CardGroup>
+
+## Authentication
+
+The Business Subscriptions API uses your **Yelp Places API Key** (Bearer token). This is the same API key used for Yelp Fusion / Places endpoints.
+
+```bash
+Authorization: Bearer YOUR_YELP_PLACES_API_KEY
+```
+
+Before you can use the API, your Yelp Places Client must be enabled for Business Subscriptions. Email [partner-support@yelp.com](mailto:partner-support@yelp.com) with your **Client ID** and the **subscription types** you plan to manage.
+
+## Rate Limits & Processing Time
+
+| Metric | Value |
+|---|---|
+| Rate limit | 5 requests per second per client per endpoint |
+| Expected processing time | 99% of requests within 15 minutes |
+
+<Note>
+  Add and delete requests are processed **asynchronously**. A `202 Accepted` response confirms your request was received and queued — it does not mean subscriptions have been applied yet. There is no way to await the actual addition or removal.
+</Note>
+
+## Endpoints
+
+### Get current subscriptions
+
+```
+GET https://api.yelp.com/v3/businesses/subscriptions
+```
+
+Use the `subscription_type` query parameter to filter results.
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/businesses/subscriptions?subscription_type=YELP_KNOWLEDGE" \
+  -H "Authorization: Bearer YOUR_YELP_PLACES_API_KEY"
+```
+
+---
+
+### Subscribe to businesses
+
+```
+POST https://api.yelp.com/v3/businesses/subscriptions
+```
+
+Subscribe one or more businesses to one or more subscription types in a single call.
+
+**Request body**
+
+```json
+{
+  "business_ids": [
+    "WavvLdfdP6g8aZTtbBQHTw",
+    "4ojWppqh0YFoU9NQ7532PQ"
+  ],
+  "subscription_types": ["YELP_KNOWLEDGE"]
+}
+```
+
+You can include multiple types in the same request:
+
+```json
+{
+  "business_ids": ["WavvLdfdP6g8aZTtbBQHTw"],
+  "subscription_types": ["LISTING_MANAGEMENT", "WEBHOOK"]
+}
+```
+
+**Success response:** `HTTP 202 Accepted`
+
+---
+
+### Unsubscribe from businesses
+
+```
+DELETE https://api.yelp.com/v3/businesses/subscriptions
+```
+
+**Request body**
+
+```json
+{
+  "business_ids": [
+    "WavvLdfdP6g8aZTtbBQHTw"
+  ],
+  "subscription_types": ["YELP_KNOWLEDGE"]
+}
+```
+
+**Success response:** `HTTP 202 Accepted`
+
+<Warning>
+  Unsubscribe locations immediately when a customer's access to your Yelp add-on churns. Locations that remain subscribed are subject to billing. Actively managing subscription state is critical to invoice accuracy.
+</Warning>
+
+---
+
+### Get quota (YELP_KNOWLEDGE only)
+
+```
+GET https://api.yelp.com/v3/businesses/subscriptions/YELP_KNOWLEDGE/quota
+```
+
+Returns your current subscription count and the maximum allowed under your contract.
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/businesses/subscriptions/YELP_KNOWLEDGE/quota" \
+  -H "Authorization: Bearer YOUR_YELP_PLACES_API_KEY"
+```
+
+## Finding Business IDs
+
+All subscription endpoints require Yelp Business IDs. Use the [Business Match API](https://docs.developer.yelp.com/reference/v3_business_match) to resolve a business name and address to its Yelp ID.
+
+## Partner Feeds (YELP_KNOWLEDGE)
+
+When you subscribe businesses with `YELP_KNOWLEDGE`, those businesses are included in your **Partner Feed** — a daily bulk data delivery of current Yelp business data in JSON format, uploaded to a dedicated S3 bucket.
+
+### Onboarding steps
+
+<Steps>
+  <Step title="Sign your partner contract">
+    A Yelp/Partner contract must be in place before feed access is provisioned.
+  </Step>
+  <Step title="Provide your GPG key">
+    Share your public GPG key with Yelp so your S3 credentials can be delivered securely as an encrypted `.asc` file.
+  </Step>
+  <Step title="Yelp provisions your S3 bucket">
+    Yelp sets up a dedicated path at `s3://yelp-syndication/{partner}/` and configures a daily pipeline to deliver a compressed JSON file (e.g., `20240207_businesses.json.gz`).
+  </Step>
+  <Step title="Receive and decrypt your credentials">
+    Decrypt the provided `{partner}_s3_credentials.asc` file using GPG to obtain your S3 Access Key ID and Secret Access Key.
+
+    ```bash
+    gpg --decrypt {partner}_s3_credentials.asc
+    ```
+  </Step>
+  <Step title="Access your feed">
+    Use s3cmd, boto, or any S3-compatible tool with your credentials.
+
+    ```bash
+    # List available feed files
+    s3cmd ls s3://yelp-syndication/{partner}/
+
+    # Download a specific day's feed
+    s3cmd get s3://yelp-syndication/{partner}/20240207_businesses.json.gz
+    ```
+  </Step>
+</Steps>
+
+### Accessing feeds with Python (boto)
+
+```python
+from boto.s3.connection import S3Connection
+
+conn = S3Connection("<ACCESS_KEY_ID>", "<SECRET_ACCESS_KEY>")
+bucket = conn.get_bucket("yelp-syndication", validate=False)
+key = bucket.get_key("<partner>/20240207_businesses.json.gz")
+key.get_contents_to_filename("feed.gz")
+```
+
+<Note>
+  If a business ID is missing from your feed, it may be a test location, inactive/restricted, or currently being merged. For merged businesses, use the Business Detail endpoint to find the new Yelp business ID.
+</Note>
+
+## WEBHOOK Subscription Type
+
+Subscribing to `WEBHOOK` enables real-time HTTP POST notifications for events on those businesses. You must complete the webhook setup process (URL verification, partner agreement) before subscriptions take effect.
+
+For full setup instructions and payload formats, see [Webhooks](/docs/partner/webhooks).
+
+## Migrating from Legacy APIs
+
+If you previously used any of the deprecated APIs, the Business Subscriptions API is the direct replacement:
+
+| Legacy API | Replacement subscription type |
+|---|---|
+| Location Subscriptions v1 / v2 | `YELP_KNOWLEDGE` |
+| Listing Management API | `LISTING_MANAGEMENT` |
+| Webhooks allow-list API | `WEBHOOK` |
+
+<Tip>
+  All existing subscriptions from the legacy APIs were automatically migrated. You can already retrieve and manage them via the Business Subscriptions API — no re-subscription required.
+</Tip>
+
+Key changes in the new API:
+
+- **Authentication**: Username/password replaced by Yelp Places API Key (Bearer token).
+- **Single endpoint**: All subscription types managed through one API.
+- **New HTTP method**: Remove subscriptions now uses `DELETE` (was `POST`).
+- **New response code**: Successful creates/removes return `202` (was `204`).
+- **Error schema**: Error field renamed from `id` to `code` for consistency.

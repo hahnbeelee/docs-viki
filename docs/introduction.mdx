@@ -1,0 +1,84 @@
+---
+title: "Yelp Developer Platform: APIs for Local Business Data"
+sidebarTitle: "Introduction"
+description: "Explore Yelp's developer APIs: the self-serve Places API for business search and the contracted Partner APIs for advertising, insights, and more."
+---
+
+The Yelp Developer Platform gives you programmatic access to Yelp's rich local business data, covering millions of businesses around the world. Whether you're building a consumer app, a data pipeline, or an enterprise integration, Yelp offers two complementary API families to fit your use case: the **Yelp Places API**, available via self-serve sign-up, and the **Yelp Partner APIs**, available to contracted Yelp partners.
+
+## API Families
+
+<CardGroup cols={2}>
+  <Card title="Yelp Places API" icon="map-pin" href="/docs/places/overview">
+    A self-serve REST API for searching businesses, retrieving details, reading
+    reviews, browsing events, and more. Sign up instantly at
+    [business.yelp.com/data/products/places-api](https://business.yelp.com/data/products/places-api/).
+  </Card>
+  <Card title="Yelp Partner APIs" icon="handshake" href="/docs/partner/overview">
+    A suite of contracted APIs covering advertising, listing management,
+    insights, leads, reservations, and checkout flows. Requires a partnership
+    agreement with Yelp.
+  </Card>
+  <Card title="Quick Start" icon="bolt" href="/docs/getting-started">
+    Create your app, grab your API key, and make your first Business Search call
+    in minutes.
+  </Card>
+  <Card title="Yelp AI API" icon="sparkles" href="/docs/ai/overview">
+    Early-access conversational AI powered by Yelp's local business graph.
+    Available on the Premium Places API plan.
+  </Card>
+</CardGroup>
+
+## Yelp Places API Plans
+
+The Places API is available on two tiers. You can start with a free trial and upgrade at any time on the [pricing page](https://business.yelp.com/data/products/places-api/).
+
+| Plan | Included calls | Attributes |
+|---|---|---|
+| **Trial / Starter** | 5,000 calls per 30 days | Base (15 attributes) |
+| **Paid** | 30,000 calls per month (5,000/day) | Enhanced (23) or Premium (66 + AI access) |
+
+<Tip>
+  If your product needs more than 150,000 monthly API calls, contact the Yelp
+  sales team through the [Enterprise form](https://fusion.yelp.com/enterprise/apply/).
+</Tip>
+
+## Yelp Partner APIs
+
+Yelp Partner APIs are disabled by default and require setup by Yelp before you can use them. Each endpoint requires additional configuration or a separate set of credentials issued by your Yelp account team. Partner API offerings include:
+
+- **Advertising APIs** — Data Ingestion, Ads, Reporting, Leads, and more
+- **Insights APIs** — Respond to Reviews, Partner Feeds, Engagement Metrics, Private Reviews
+- **Platform APIs** — Checkout, Fulfillment, Transaction Iframe, Reservations
+
+<Note>
+  If you're unsure which APIs your organization has access to, reach out to your
+  company's business development or partnership team.
+</Note>
+
+## Base URL
+
+All Yelp Places API endpoints share the same base URL:
+
+```
+https://api.yelp.com/v3
+```
+
+Partner APIs that use the `partner-api.yelp.com` subdomain are documented separately — see [Partner APIs Overview](/docs/partner/overview).
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get Started" icon="rocket" href="/docs/getting-started">
+    Step-by-step guide from sign-up to your first API response.
+  </Card>
+  <Card title="Authentication" icon="key" href="/docs/authentication">
+    Learn how to authenticate requests with your API key.
+  </Card>
+  <Card title="Rate Limits" icon="gauge" href="/docs/rate-limiting">
+    Understand daily limits, QPS caps, and response headers.
+  </Card>
+  <Card title="Places API Overview" icon="building" href="/docs/places/overview">
+    Full endpoint reference for the Yelp Places API.
+  </Card>
+</CardGroup>

@@ -1,0 +1,247 @@
+---
+title: "Receive Real-Time Notifications with Yelp Webhooks"
+sidebarTitle: "Webhooks"
+description: "Configure and handle Yelp webhook notifications for reviews, leads, Data Ingestion jobs, and other business events in real time."
+---
+
+Yelp webhooks let your server receive instant HTTP POST notifications whenever something important happens on a Yelp business page. Instead of polling the API for changes, Yelp pushes data to your configured endpoint the moment an event occurs — a new review, a new lead, a Data Ingestion job update, a verified license, or a consumer phone opt-in. This makes it possible to keep your systems synchronized with Yelp data in near-real time.
+
+<Warning>
+  **Partner access only.** Webhooks are reserved exclusively for official Yelp [advertising](https://business.yelp.com/partners/), [listing management](https://business.yelp.com/partners/listing-management-partners/), and [Yelp Insights](https://business.yelp.com/data/products/insights-api/) partners. To inquire about partner status, visit one of those pages or contact your Yelp account representative.
+</Warning>
+
+## Setup Process
+
+<Steps>
+  <Step title="Become an official Yelp partner">
+    You must be an approved Yelp advertising, listing management, or Insights partner before webhook access can be provisioned.
+  </Step>
+  <Step title="Share your Client ID and webhook URL with Yelp">
+    Provide your **Yelp Places Client ID** and the **HTTPS webhook URL** where Yelp should deliver POST requests. Share these with your Yelp account representative or solutions engineer.
+  </Step>
+  <Step title="Complete URL verification">
+    Yelp will send a `GET` request to your webhook URL with a `verification` query parameter containing a random alphanumeric string:
+
+    ```
+    GET https://www.yourdomain.com/webhooks?verification=abc123xyz
+    ```
+
+    Your server must respond with a JSON body echoing the same string:
+
+    ```json
+    { "verification": "abc123xyz" }
+    ```
+
+    Verification is triggered manually by a Yelp employee. Email your Yelp account team when your endpoint is ready.
+  </Step>
+  <Step title="Yelp begins sending POST requests">
+    Once verified, Yelp's webhooks system starts delivering POST requests to your URL for all configured event types.
+  </Step>
+  <Step title="Subscribe to specific businesses">
+    Use the [Business Subscriptions API](/docs/partner/business-subscriptions) with `subscription_type: "WEBHOOK"` to subscribe the specific businesses you want to receive notifications for. You will **only** receive webhooks for subscribed businesses.
+
+    ```json
+    {
+      "business_ids": ["WavvLdfdP6g8aZTtbBQHTw"],
+      "subscription_types": ["WEBHOOK"]
+    }
+    ```
+
+    <Note>
+      Sync your business subscriptions at least once every 24 hours to keep them current with your active customer base.
+    </Note>
+  </Step>
+</Steps>
+
+## Endpoint Requirements
+
+Your webhook endpoint must:
+
+- Respond with an **HTTP `2XX` status code**
+- Respond within **10 seconds or less**
+
+Any response outside the `2XX` range — or a timeout — is treated as a failed delivery.
+
+### Python Flask example
+
+```python
+#!/usr/bin/python
+from flask import Flask, request
+import json
+import os
+
+app = Flask(__name__)
+
+
+@app.route("/webhooks")
+def verify():
+    """Handle Yelp's URL verification GET request."""
+    return json.dumps(request.args)
+
+
+@app.route("/webhooks", methods=["POST"])
+def handle_webhook():
+    """Handle incoming Yelp webhook POST events."""
+    webhook_payload = json.loads(request.data)
+    print("webhook_payload", webhook_payload)
+
+    # Process the payload here...
+
+    return "", 201
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, threaded=False, processes=1)
+```
+
+## Retries
+
+If your server responds with a non-`2XX` status or times out, Yelp will **retry delivery at intervals for up to 24 hours**. After 24 hours of failed retries, the message is permanently discarded.
+
+## Message Ordering
+
+<Warning>
+  Message delivery order is **not guaranteed**. Due to retries and internal processing, events may arrive out of chronological sequence.
+</Warning>
+
+Every webhook payload includes at least one timestamp. Use those timestamps to:
+
+- Determine the correct chronological order of events.
+- Deduplicate messages — the same event may be delivered more than once.
+
+## Payload Formats
+
+### Standard payload structure
+
+All webhook payloads share the same top-level structure:
+
+```json
+{
+  "time": "2022-06-09T09:41:14+00:00",
+  "object": "business",
+  "data": {
+    "id": "SoVHhx7Hel_XX0DKCLp72Q",
+    "updates": [
+      {
+        "event_type": "...",
+        ...
+      }
+    ]
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `time` | Yelp processing time (ISO 8601, UTC). |
+| `object` | Always `"business"`. |
+| `data.id` | The Yelp Business ID the event applies to. |
+| `data.updates` | Array of event objects (usually one entry per notification). |
+
+### Lead interaction event (`NEW_EVENT`)
+
+You receive this payload when a new lead is created, or when a new interaction occurs on an existing lead (e.g., a consumer sends a message).
+
+```json
+{
+  "time": "2022-06-09T09:41:14+00:00",
+  "object": "business",
+  "data": {
+    "id": "SoVHhx7Hel_XX0DKCLp72Q",
+    "updates": [
+      {
+        "event_type": "NEW_EVENT",
+        "event_id": "IsKxQAYZNqCjvRRmNoiCUw",
+        "lead_id": "TbvEUYEi02cmSBmqCjQbkg",
+        "interaction_time": "2022-06-09T09:41:13+00:00"
+      }
+    ]
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `event_type` | Always `NEW_EVENT` for lead interaction webhooks. |
+| `event_id` | Unique ID for this specific event. |
+| `lead_id` | ID of the lead the interaction occurred on. Use this with the [Get Lead Events endpoint](https://docs.developer.yelp.com/reference/get-lead-events) to retrieve the full message content. |
+| `interaction_time` | When the consumer interaction was created. |
+
+<Note>
+  Webhook payloads do **not** include the full message text. Use `lead_id` with the Get Lead Events endpoint to retrieve content, attachments, and other details.
+</Note>
+
+### Phone number opt-in event (`CONSUMER_PHONE_NUMBER_OPT_IN_EVENT`)
+
+You receive this payload when a lead submitter opts in to being contacted by phone and completes the verification process.
+
+```json
+{
+  "time": "2022-06-09T09:41:14+00:00",
+  "object": "business",
+  "data": {
+    "id": "SoVHhx7Hel_XX0DKCLp72Q",
+    "updates": [
+      {
+        "event_type": "CONSUMER_PHONE_NUMBER_OPT_IN_EVENT",
+        "lead_id": "TbvEUYEi02cmSBmqCjQbkg"
+      }
+    ]
+  }
+}
+```
+
+When you receive an opt-in webhook, call the [Get Lead endpoint](https://docs.developer.yelp.com/reference/get-lead) to retrieve the consumer's phone number and update your lead record accordingly.
+
+The `event_type` field for phone status events can be:
+- `CONSUMER_PHONE_NUMBER_OPT_IN_EVENT` — consumer opted in
+- `CONSUMER_PHONE_NUMBER_OPT_OUT_EVENT` — consumer opted out
+
+## What Events Trigger Webhooks?
+
+Once setup is complete, Yelp sends webhook notifications for the following events (exact events depend on your partner configuration):
+
+- A **new lead** is created for a subscribed business.
+- A **new interaction** is added to an existing lead (e.g., a new message).
+- A **Data Ingestion API job** is updated.
+- A business **license is verified**.
+- A consumer **opts in or out** of sharing their phone number (if enabled for your account).
+
+<Note>
+  Webhooks are sent when events become eligible to appear on Yelp for Business — not necessarily the moment the user acted. Spam review and fraud detection may delay delivery by minutes, hours, or days. Webhooks for phone number opt-in events are sent for leads up to 2 weeks old.
+</Note>
+
+## Frequently Asked Questions
+
+<AccordionGroup>
+  <Accordion title="Can you share Yelp's IP addresses so we can allowlist them?">
+    Yes. For general webhooks, request the IP list from your Yelp account team and solutions engineer.
+
+    For the **Leads API webhooks** specifically, allowlist the following IP addresses:
+
+    ```
+    52.35.20.1
+    52.35.117.102
+    52.35.163.243
+    52.70.234.63
+    52.70.234.62
+    52.70.115.133
+    ```
+  </Accordion>
+  <Accordion title="Will I get notified if the business responds directly on Yelp?">
+    Yes. Yelp webhooks notify you of all interactions on a lead regardless of source. You'll be notified for interactions made on Yelp.com and through the API, from both consumer and business users — including responses made by the business itself.
+  </Accordion>
+  <Accordion title="Why is there a delay between interaction_time and when I receive the webhook?">
+    Two common causes:
+
+    1. **Spam filtering** — Yelp may quarantine messages for some time. Webhooks fire when the message becomes eligible to display on Yelp, which may be significantly later than when the user sent it.
+    2. **Delayed display events** — Some event types are intentionally displayed on Yelp with a delay. For example, consumer hire resolution events (where a user marks another business as hired) may show a noticeable delay between the original interaction and when you are notified.
+  </Accordion>
+  <Accordion title="What happens if Yelp can't verify my webhook URL?">
+    Verification fails if your URL returns HTTP 404, times out, or responds with a body that doesn't match the expected `{"verification": "..."}` format. Yelp will **not** automatically retry URL verification — you must contact your Yelp account team to trigger a new attempt once your endpoint is ready.
+  </Accordion>
+  <Accordion title="Can I receive webhooks for businesses I haven't subscribed to?">
+    No. You only receive webhooks for businesses that you have explicitly subscribed to using the Business Subscriptions API with `subscription_type: "WEBHOOK"`.
+  </Accordion>
+</AccordionGroup>

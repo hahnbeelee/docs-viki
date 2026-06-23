@@ -1,0 +1,148 @@
+---
+title: "Integrate Restaurant Reservations via the Yelp API"
+sidebarTitle: "Reservations"
+description: "Book tables at Yelp Reservations restaurants from your own app using the Reservations API — search, hold, confirm, and cancel in one flow."
+---
+
+The Yelp Reservations API exposes a complete native booking flow so your users can find an open table and confirm a reservation without ever leaving your application. You search Yelp for restaurants with availability, fetch open time slots, hold a slot while the user fills in their details, and then create the reservation — all through a handful of REST endpoints.
+
+<Warning>
+  The Reservations API is a Yelp Partner API. Access is disabled by default. Apply for access at [yelp.com/fusion/vip/apply](https://www.yelp.com/fusion/vip/apply).
+</Warning>
+
+## How the booking flow works
+
+Three parties are involved in every reservation: your app (the partner), the end user, and Yelp. The flow below walks through each step from the user's initial search to a confirmed booking.
+
+<Steps>
+  <Step title="Search for restaurants with availability">
+    Call the Business Search endpoint with reservation parameters to find restaurants that can accommodate the user's requested date, time, and party size. The endpoint returns only restaurants that have availability for the requested slot.
+
+    ```http
+    GET /v3/businesses/search?location=San+Francisco%2C+CA
+        &attributes=reservations
+        &reservation_date=2025-02-14
+        &reservation_time=19:00
+        &reservation_covers=2
+    ```
+
+    <Note>
+      The `reservation_openings` field in the response only appears when you supply all three reservation parameters: `reservation_date`, `reservation_time`, and `reservation_covers`. Omitting any one of them will not return availability data.
+    </Note>
+
+    **If the search returns zero results**, use this fallback strategy:
+
+    1. Re-query with `attributes=reservations` and `open_at=<time>` but without the specific reservation params. If businesses appear, Yelp Reservations restaurants exist in the area but have no availability at that time.
+    2. If still zero, re-query with `attributes=reservations` but remove `open_at`. If businesses appear, they exist in the area but are currently closed.
+    3. If still zero, there are no Yelp Reservations restaurants in the search area.
+  </Step>
+
+  <Step title="Fetch available time slots">
+    Using the `business_id` from the search response, call the Openings endpoint to retrieve all available reservation times. This endpoint returns openings in 15-minute increments across multiple days — you can trust Yelp to return the same slots users would see on yelp.com, so no client-side filtering is required.
+
+    ```http
+    GET /v3/bookings/{business_id}/openings
+    ```
+
+    <Note>
+      The `business/search` endpoint returns `reservation_openings` scoped to a specific time, while `/bookings/{id}/openings` returns `reservation_times` across a broader date range. Use whichever suits your UI.
+    </Note>
+  </Step>
+
+  <Step title="Place a hold on the time slot">
+    Once the user selects a time, immediately place a hold to reserve the slot while they fill out their information. A hold prevents another user from taking the same slot during form completion.
+
+    ```http
+    POST /v3/bookings/{business_id}/holds
+    ```
+
+    If the restaurant requires a credit card and one is not yet available, the Holds endpoint returns a `null` `hold_id`. This means the slot cannot be held via API for that restaurant at this time.
+
+    <Tip>
+      If the user goes back and changes their date, time, or party size, simply call the Holds endpoint again with the same `unique_id`. Yelp automatically releases the old hold and creates a new one — no manual release is needed.
+    </Tip>
+  </Step>
+
+  <Step title="Create the reservation">
+    Submit the user's details to create the confirmed reservation. A successful response includes a `reservation_url` the user can visit to manage their booking on Yelp.
+
+    ```http
+    POST /v3/bookings/{business_id}/reservations
+    ```
+
+    <Warning>
+      You cannot edit a confirmed reservation via the API. If the user needs to change their booking, they must call the restaurant directly or use the `reservation_url` returned in the response.
+    </Warning>
+  </Step>
+
+  <Step title="Manage the reservation">
+    After booking, you can retrieve the current status of any confirmed reservation or cancel it programmatically.
+
+    ```http
+    GET  /v3/reservations/{reservation_id}/status
+    POST /v3/reservations/{reservation_id}/cancel
+    ```
+
+    Store all successful reservations in your own database to build a reservation history view for your users, since the API does not provide a history endpoint.
+  </Step>
+</Steps>
+
+## Key constraints and limits
+
+<AccordionGroup>
+  <Accordion title="Advance booking window">
+    Restaurants individually configure how far in advance they accept reservations, up to a **maximum of 1 year**. The most common configuration is **90 days** in advance, which mirrors what users see on yelp.com. It is always impossible to book in the past or to book a slot that a restaurant's minimum advance notice requirement would block.
+  </Accordion>
+
+  <Accordion title="Same-day reservation rules">
+    Same-day reservations cannot be made for a user (identified by `unique_id`) within 3 hours before or after an existing reservation at the same restaurant on the same day.
+  </Accordion>
+
+  <Accordion title="Credit card holds">
+    Approximately **25% of restaurants** require a credit card hold, and some only require it during peak periods (e.g., Valentine's Day or major holidays).
+
+    In the sandbox, any reservation for **8 or more people** triggers the credit card hold requirement. Book for 7 or fewer to test the no-credit-card path.
+
+    The API does not currently support passing stored credit card data. If a time slot requires a credit card, the Holds endpoint returns `null` for `hold_id`.
+  </Accordion>
+
+  <Accordion title='"Takes Reservations" vs. bookable via API'>
+    The **"Takes Reservations"** attribute on a Yelp business page means the business accepts reservations by phone or walk-in — it does **not** mean the business is bookable through Yelp's API.
+
+    To confirm a restaurant is bookable through the Reservations API, look for `restaurant_reservation` in the `transactions` field of the Business Search or Business Lookup response.
+  </Accordion>
+</AccordionGroup>
+
+## Testing
+
+Yelp provisions test business IDs you can book against freely. Testing runs in the **production environment** — there is no separate sandbox environment — so you must use only the designated test businesses and not book at real Yelp restaurants.
+
+### Test businesses
+
+| Business | Notes |
+|----------|-------|
+| Victor's French Bistro | Sandbox-only listing |
+| Bento Burger | Also bookable in production |
+| La Tre Vietnamese Restaurant | Also bookable in production |
+| Tracie's Taqueria | Also bookable in production |
+| Truffle Gal | Test listing |
+| Dhruv's Dal | Test listing |
+| Delicious Fried Chicken | Test listing |
+| Halal Siblings | Test listing |
+| Cake in Kake | Test listing |
+| Swanky Restaurant | Test listing |
+
+You can query availability for these businesses directly and complete the full booking flow from there.
+
+### Production testing limits
+
+When you begin testing against real restaurants in production (before your integration goes live), observe these limits to avoid impacting restaurant operations:
+
+- **Same-day reservations**: physically go to the restaurant; there is no limit
+- **Advance reservations**: make them at least 2 weeks ahead, cancel by end of the business day
+- **Maximum 3 advance bookings per restaurant per day**
+- **Maximum 15 total bookings per day** across all restaurants
+
+<Note>
+  These limits apply only during integration testing. Once your production integration is live, real bookings made by actual users are expected to be honored and are not subject to these volume caps.
+</Note>

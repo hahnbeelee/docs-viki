@@ -1,0 +1,271 @@
+---
+title: "Retrieve Business Metrics with the Yelp Reporting API"
+sidebarTitle: "Reporting API"
+description: "Request daily or monthly business and advertiser metrics for up to 500 Yelp businesses per call using your Yelp Places API key and a two-step request-then-fetch flow."
+---
+
+The Yelp Reporting API gives advertising, listing management, and knowledge partners a structured way to pull performance data for the businesses they manage. You request a report for a set of business IDs and a date range, receive a `report_id` immediately, and fetch the processed results once the report is ready — typically within 30 minutes. The same API covers two categories of metrics: **Business Metrics** (organic plus ad-driven totals like page views, calls, and reviews) and **Advertiser Metrics** (CPC-specific signals like billed impressions, ad clicks, and average cost per click).
+
+<Warning>
+  **This is a Yelp Partner API.** Access is limited to contracted Yelp
+  advertising, listing management, and knowledge partners. Your Yelp Fusion
+  client must be separately enabled for Reporting API access — it is not
+  automatically granted alongside other Partner API access. Work with your Yelp
+  representative to set this up.
+</Warning>
+
+<Note>
+  Migrating from Reporting API v2? See the
+  [v2-to-v3 migration guide](https://docs.developer.yelp.com/docs/reporting-v2-to-v3-migration-guide)
+  for a summary of breaking changes. v1 was retired in December 2023; v2 was
+  retired in December 2024.
+</Note>
+
+## Authentication
+
+The Reporting API uses your **Yelp Places API Key** (the same key you use for the Yelp Places/Fusion API), passed as a `Bearer` token:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer {your_api_key}" \
+  -H "Content-Type: application/json" \
+  https://api.yelp.com/v3/reporting/businesses/daily
+```
+
+Reporting API requires **separate enablement** from Data Ingestion or Ads API. Even if those are already active, ask your Yelp rep to explicitly enable Reporting API for your Fusion client.
+
+## Base URL and Versioning
+
+The current version is **v3**. All endpoints are located at:
+
+```
+https://api.yelp.com/v3/reporting/
+```
+
+| Version | Status | Notes |
+|---|---|---|
+| v1 | Retired | End of support June 2023; retired December 2023 |
+| v2 | Retired | End of new access June 2023; retired December 2024 |
+| v3 | **Current** | All new integrations should use v3 |
+
+## Data Availability and Processing Schedule
+
+Yelp metrics are **batch processed once every 24 hours**. Each analytics run captures one full day of data (midnight-to-midnight PST). After you request a report, processing takes approximately **30 minutes**; poll the fetch endpoint until the report status is no longer `PROCESSING`.
+
+| Metric Category | Typically available by |
+|---|---|
+| Business Metrics | ~1:00 PM PST the following day |
+| Advertiser Metrics | ~10:00 AM PST the following day |
+
+Once metrics are available in the Reporting API, they do not change retroactively.
+
+<Note>
+  There may be more than a 24-hour lag in edge cases — for example, an ad
+  delivered at 12:01 AM Monday may not appear in reporting until the analytics
+  run completes at ~10 AM Tuesday. The batch itself runs every day.
+</Note>
+
+## Business ID Requirements
+
+The Reporting API requires **encrypted** Yelp Business IDs. Use the [Business Match API](https://docs.developer.yelp.com/reference/v3_business_match) to retrieve the correct encrypted ID for each listing. You may include a **maximum of 500 business IDs per request**.
+
+## Endpoints
+
+The Reporting API uses a two-step pattern: first **request** a report (returns a `report_id`), then **fetch** the results once processing is complete.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/v3/reporting/businesses/daily` | Request a daily report (up to 89 days ago) |
+| `POST` | `/v3/reporting/businesses/monthly` | Request a monthly report (up to 2 months ago) |
+| `GET` | `/v3/reporting/businesses/daily/{report_id}` | Fetch results of a daily report |
+| `GET` | `/v3/reporting/businesses/monthly/{report_id}` | Fetch results of a monthly report |
+
+### Step 1 — Request a Report
+
+<Tabs>
+  <Tab title="Daily Report">
+    Request daily metrics for a list of businesses over a date range. Daily data is available up to **89 days ago**.
+
+    ```bash
+    curl -X POST \
+      -H "Authorization: Bearer {your_api_key}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "business_ids": ["WavvLdfdP6g8aZTtbBQHTw", "abc123XYZ"],
+        "date_range": {
+          "start": "2024-11-01",
+          "end": "2024-11-07"
+        },
+        "metrics": [
+          "num_total_page_views",
+          "num_calls",
+          "billed_clicks",
+          "ad_cost"
+        ]
+      }' \
+      https://api.yelp.com/v3/reporting/businesses/daily
+    ```
+
+    ```json
+    {
+      "report_id": "rpt_abc123XYZdailyExample"
+    }
+    ```
+  </Tab>
+
+  <Tab title="Monthly Report">
+    Request monthly aggregated metrics. Monthly data is available up to **2 months ago**.
+
+    ```bash
+    curl -X POST \
+      -H "Authorization: Bearer {your_api_key}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "business_ids": ["WavvLdfdP6g8aZTtbBQHTw"],
+        "month_range": {
+          "start": "2024-10",
+          "end": "2024-11"
+        },
+        "metrics": [
+          "num_total_page_views",
+          "rating",
+          "reviews",
+          "ad_cost",
+          "average_cost_per_click"
+        ]
+      }' \
+      https://api.yelp.com/v3/reporting/businesses/monthly
+    ```
+
+    ```json
+    {
+      "report_id": "rpt_xyz789monthlyExample"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Step 2 — Fetch the Report
+
+Poll with the `report_id` returned in Step 1. Reports usually take ~30 minutes to process.
+
+```bash
+curl -X GET \
+  -H "Authorization: Bearer {your_api_key}" \
+  https://api.yelp.com/v3/reporting/businesses/daily/rpt_abc123XYZdailyExample
+```
+
+If the report is still processing you will receive a `202 Job not complete` response. Once ready, the response body contains the metrics keyed by business ID and date.
+
+## Available Metrics
+
+### Business Metrics
+
+Business Metrics count consumer interactions with a Yelp business listing. All values are **totals inclusive of both organic and ad-driven activity**.
+
+<AccordionGroup>
+  <Accordion title="Visibility & Page Views">
+    | Metric | Display Name | Description |
+    |---|---|---|
+    | `num_total_page_views` | Total User Views | Total page views on desktop and mobile |
+    | `num_desktop_page_views` | Desktop User Views | Business page views on desktop |
+    | `num_mobile_page_views` | Mobile User Views | Business page views on mobile |
+    | `num_desktop_search_appearances` | Desktop Appearances in Search | Times the listing appeared in desktop search results |
+    | `num_mobile_search_appearances` | Mobile Appearances in Search | Times the listing appeared in mobile search results |
+    | `organic_biz_page_views` | Organic Page Visits | Page views not attributable to an ad click or impression |
+    | `organic_biz_page_views_percentage` | % Biz Page Views Organic | Percentage of page views that were organic |
+  </Accordion>
+
+  <Accordion title="Consumer Actions">
+    | Metric | Display Name | Description |
+    |---|---|---|
+    | `num_calls` | Mobile Calls | Phone calls initiated from the Yelp profile |
+    | `num_directions_and_map_views` | Directions & Map Views | Direction and map view requests from the profile |
+    | `url_clicks` | Clicks to Website | Clicks to the business URL from the profile |
+    | `num_messages_to_business` | Request a Quote - Messages | Messages sent to a business including Request a Quote |
+    | `num_desktop_cta_clicks` | Desktop CTA Clicks | Call-to-Action clicks on desktop |
+    | `num_mobile_cta_clicks` | Mobile CTA Clicks | Call-to-Action clicks on mobile |
+    | `num_check_ins` | Mobile Check-ins | Mobile check-ins from the profile |
+    | `num_bookmarks` | Yelp Bookmarks | Times the business was bookmarked |
+    | `num_user_photos` | User Uploaded Photos | User-generated photos added to the profile |
+    | `rapc_initiated` | RaPC Initiated | Number of times Request a Phone Call was initiated |
+  </Accordion>
+
+  <Accordion title="Commerce & Transactions">
+    | Metric | Display Name | Description |
+    |---|---|---|
+    | `online_orders` | Online Orders | Number of online orders |
+    | `online_bookings` | Online Bookings | Number of online bookings |
+    | `deals_sold` | Deals Sold | Number of deals sold |
+    | `check_in_offer_redemptions` | Check In Offer Redemptions | Redeemed check-in offers |
+    | `waitlist_visit_created` | Waitlist Visit Created | Times someone joined the Yelp Waitlist |
+  </Accordion>
+
+  <Accordion title="Reputation & Engagement">
+    | Metric | Display Name | Description |
+    |---|---|---|
+    | `rating` | Rating | Average star rating (1–5 scale) |
+    | `reviews` | Reviews | Number of unfiltered reviews |
+    | `total_leads` | Total # of Leads | Total leads across all lead metric types |
+    | `median_response_time_in_sec` | Median Response Time (secs) | Median time for the business to answer messages |
+    | `reply_rate` | Reply Rate | Percentage of messages replied to |
+    | `collection_item_added` | Collections | Times the business was added to a user collection |
+    | `tracking_calls` | Calls Tracked | Number of tracked calls |
+  </Accordion>
+</AccordionGroup>
+
+### Advertiser Metrics
+
+Advertiser Metrics report on CPC program performance, including ad impressions, clicks, spend, and ad-attributed consumer actions. Campaign name, campaign ID, and store code are not available in the Reporting API.
+
+<AccordionGroup>
+  <Accordion title="Core Ad Performance">
+    | Metric | Display Name | Description |
+    |---|---|---|
+    | `billed_impressions` | Billed Ad Impressions | Ad impressions that will be billed |
+    | `billed_clicks` | Billed Ad Clicks | Clicks on ads that resulted in a visit to the business page |
+    | `ad_cost` | Ad Cost | Cost of billed ad activity (in **cents**) |
+    | `ad_click_through_rate` | Ad Click Through Rate | Ratio of clicks to impressions |
+    | `average_cost_per_click` | Average Cost Per Click | Average amount charged per billed click |
+    | `billable_ad_clicks` | Billable Ad Clicks | Total clicks across all click-based campaigns |
+    | `billable_ad_impressions` | Billable Ad Impressions | Total times the listing was displayed in an ad |
+  </Accordion>
+
+  <Accordion title="Ad-Driven Consumer Actions">
+    | Metric | Display Name | Description |
+    |---|---|---|
+    | `ad_driven_calls` | Ad Driven Mobile Calls | Click-to-call actions attributable to an ad impression |
+    | `ad_driven_url_clicks` | Ad Driven Clicks to Website | Website clicks attributable to an ad impression |
+    | `ad_driven_directions_and_map_views` | Ad Driven Directions & Map Views | Direction requests attributable to an ad impression |
+    | `ad_driven_messages_to_business` | Ad Driven Request a Quote - Messages | Messages including RAQ attributable to an ad impression |
+    | `ad_driven_cta_clicks` | Ad Driven Total CTA Clicks | CTA clicks on desktop attributable to an ad impression |
+    | `ad_driven_bookmarks` | Ad Driven Yelp Bookmarks | Bookmarks attributable to an ad impression |
+    | `ad_driven_check_ins` | Ad Driven Mobile Check-ins | Check-ins attributable to an ad impression |
+    | `ad_driven_deals_sold` | Ad Driven Deals Sold | Deals sold attributable to an ad impression |
+    | `ad_driven_online_reservations` | Ad Driven Online Reservations | Yelp Reservations/Nowait bookings attributable to an ad impression |
+    | `ad_driven_user_photos` | Ad Driven User Uploaded Photos | Photos added attributable to an ad impression |
+    | `ad_driven_biz_page_views` | Ad Driven Page Visits | Page views using 30-day click attribution / 1-day impression attribution |
+    | `ad_driven_calls_tracked` | Ad Driven Calls Tracked | Answered calls after seeing or clicking an ad (Yelp Call Reporting only) |
+    | `ad_driven_rapc_initiated` | Ad Driven RaPC Initiated | Request a Phone Call initiations attributable to an ad |
+    | `ad_driven_waitlist_visit_created` | Ad Driven Waitlist Visit Created | Waitlist joins after seeing or clicking an ad |
+    | `ad_driven_total_leads` | Total # of Ad Driven Leads | Sum of all ad-driven lead metrics |
+    | `ad_driven_biz_page_views_percentage` | % Biz Page Views Ad Driven | Percentage of page views derived from ads |
+    | `ad_driven_platform_purchase_made` | Ad Driven Platform Purchases | Third-party platform purchases attributable to an ad |
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  **Appearances vs. Impressions:** An "appearance" is an organic search result
+  show (`num_desktop_search_appearances`, `num_mobile_search_appearances`). An
+  "impression" is a paid ad display. Billed clicks are the best proxy for
+  ad-driven page views if you need that signal — they're not an exact match but
+  are closely correlated.
+</Tip>
+
+## Version History
+
+| Revision | Date | Summary |
+|---|---|---|
+| 1.0 | — | Initial version |
+| 2.0 | October 2017 | Added metric descriptions; revised Business Metrics nomenclature |
+| 3.0 | December 2022 | Release of Reporting API v3 (current) |

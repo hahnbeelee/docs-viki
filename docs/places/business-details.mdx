@@ -1,0 +1,219 @@
+---
+title: "Get Business Details from the Yelp Places API"
+sidebarTitle: "Business Details"
+description: "Retrieve rich business data by Yelp ID or alias: hours, photos, ratings, categories, location, price, and more depending on your plan."
+---
+
+The Business Details endpoint returns comprehensive information for a single business, identified by its unique Yelp `id` or human-readable `alias`. You get everything the Business Search endpoint returns, plus additional attributes like hours of operation, multiple photos, and — on higher plans — expanded details covering the business's story, customer experience attributes, and premium features. Use this endpoint after a search to build business profile pages, enrich your own data, or power voice and chat experiences.
+
+**Endpoint:** `GET https://api.yelp.com/v3/businesses/{id}`
+
+---
+
+## Path Parameter
+
+<ParamField path="id" type="string" required>
+  The unique Yelp business identifier **or** the business alias. Both are
+  accepted interchangeably.
+
+  - **ID** — An opaque unique hash (e.g., `WavvLdfdP6g8aZTtbBQHTw`). Always
+    stable; use this for permanent storage and back-end matching.
+  - **Alias** — A human-readable slug derived from the business name and city
+    (e.g., `molinari-delicatessen-san-francisco`). Easier to read but may
+    change if the business name changes.
+</ParamField>
+
+<Note>
+  When storing business references in your database, prefer the **ID** (opaque
+  hash) rather than the alias, since aliases can change if a business is renamed
+  or relocates. Yelp IDs are permanent and unique.
+</Note>
+
+---
+
+## Example Requests
+
+**By alias:**
+
+```bash
+curl --request GET \
+  --url "https://api.yelp.com/v3/businesses/molinari-delicatessen-san-francisco" \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "accept: application/json"
+```
+
+**By unique ID:**
+
+```bash
+curl --request GET \
+  --url "https://api.yelp.com/v3/businesses/WavvLdfdP6g8aZTtbBQHTw" \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "accept: application/json"
+```
+
+---
+
+## Example Response
+
+```json
+{
+  "id": "north-india-restaurant-san-francisco",
+  "alias": "north-india-restaurant-san-francisco",
+  "name": "North India Restaurant",
+  "url": "https://www.yelp.com/biz/north-india-restaurant-san-francisco",
+  "phone": "+14155...",
+  "rating": 4,
+  "review_count": 551,
+  "price": "$$",
+  "is_closed": false,
+  "image_url": "https://s3-media1.fl.yelpcdn.com/bphoto/howYvOKNPXU9A5KUahEXLA/o.jpg",
+  "photos": [
+    "http://s3-media4.fl.yelpcdn.com/bphoto/howYvOKNPXU9A5KUahEXLA/o.jpg",
+    "http://s3-media3.fl.yelpcdn.com/bphoto/I-CX8nioj3_ybAAYmhZcYg/o.jpg",
+    "http://s3-media2.fl.yelpcdn.com/bphoto/uaSNfzJUiFDzMeSCwTcs-A/o.jpg"
+  ],
+  "categories": [
+    {
+      "alias": "indpak",
+      "title": "Indian"
+    }
+  ],
+  "coordinates": {
+    "latitude": 37.787789124691,
+    "longitude": -122.399305736113
+  },
+  "location": {
+    "address1": "123 Second St",
+    "address2": "",
+    "address3": "",
+    "city": "San Francisco",
+    "state": "CA",
+    "zip_code": "94105",
+    "country": "US"
+  },
+  "transactions": ["delivery", "restaurant_reservation"],
+  "hours": [
+    {
+      "hours_type": "REGULAR",
+      "is_open_now": true,
+      "open": [
+        { "day": 0, "start": "1000", "end": "2300", "is_overnight": false },
+        { "day": 1, "start": "1000", "end": "2300", "is_overnight": false },
+        { "day": 2, "start": "1000", "end": "2300", "is_overnight": false },
+        { "day": 3, "start": "1000", "end": "2300", "is_overnight": false },
+        { "day": 4, "start": "1000", "end": "0000", "is_overnight": false },
+        { "day": 5, "start": "1000", "end": "0000", "is_overnight": false },
+        { "day": 6, "start": "1000", "end": "2300", "is_overnight": false }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Response Fields
+
+<ResponseField name="id" type="string">
+  The unique, stable Yelp identifier for this business. Use this for
+  long-term storage and back-end deduplication.
+</ResponseField>
+
+<ResponseField name="alias" type="string">
+  A human-readable slug (e.g., `molinari-delicatessen-san-francisco`). Can be
+  used in place of `id` in API calls but may change if the business renames.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The business's display name as it appears on Yelp.
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  The canonical URL of the business's Yelp profile page.
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  The business phone number in E.164 format (e.g., `+14155551234`).
+</ResponseField>
+
+<ResponseField name="location" type="object">
+  An object containing `address1`, `address2`, `address3`, `city`, `state`,
+  `zip_code`, and `country` fields for the business's physical address.
+</ResponseField>
+
+<ResponseField name="coordinates" type="object">
+  An object with `latitude` and `longitude` of the business location.
+</ResponseField>
+
+<ResponseField name="rating" type="number">
+  The Yelp star rating, from 1.0 to 5.0 in 0.5-star increments.
+</ResponseField>
+
+<ResponseField name="review_count" type="integer">
+  Total number of reviews the business has received on Yelp.
+</ResponseField>
+
+<ResponseField name="price" type="string">
+  Price level indicator: `$`, `$$`, `$$$`, or `$$$$`. Available on Enhanced
+  and Premium plans.
+</ResponseField>
+
+<ResponseField name="categories" type="array">
+  A list of category objects, each with an `alias` and human-readable `title`
+  (e.g., `{ "alias": "delis", "title": "Delis" }`).
+</ResponseField>
+
+<ResponseField name="hours" type="array">
+  An array of hours objects describing the business's schedule. Each entry
+  includes `hours_type` (`"REGULAR"`), an `is_open_now` boolean, and an `open`
+  array with per-day entries containing `day` (0=Monday … 6=Sunday), `start`,
+  `end`, and `is_overnight`.
+</ResponseField>
+
+<ResponseField name="photos" type="array">
+  An array of photo URLs for the business. Base plan: 1 (profile image only);
+  Enhanced: up to 3; Premium: up to 12.
+</ResponseField>
+
+<ResponseField name="is_closed" type="boolean">
+  `true` if the business is permanently closed; `false` otherwise.
+</ResponseField>
+
+<ResponseField name="transactions" type="array">
+  A list of supported transaction types such as `"delivery"`,
+  `"pickup"`, and `"restaurant_reservation"`.
+</ResponseField>
+
+---
+
+## Plan Attributes
+
+The number of attributes returned by this endpoint depends on your plan tier. The Base plan returns 15 essential attributes. Enhanced adds 8 more (including price, photos, and review excerpts). Premium unlocks all 66 attributes, including rich "About the Business" content, customer experience details (ambience, noise, outdoor seating, etc.), and additional features (parking, WiFi, alcohol served, etc.).
+
+<Note>
+  On the **Premium** plan, this endpoint returns up to 66 attributes and gives
+  you access to the Review Highlights endpoint (`GET /v3/businesses/{id}/review_highlights`).
+  See the [Plans comparison](/docs/places/overview#plan-comparison) for the full
+  attribute list.
+</Note>
+
+---
+
+## Finding a Business by Name and Address
+
+If you have a business's name and address from an external source but don't yet know its Yelp ID, use the **Business Match** endpoint to find it:
+
+```bash
+curl --request GET \
+  --url "https://api.yelp.com/v3/businesses/matches?name=Molinari+Delicatessen&address1=373+Columbus+Ave&city=San+Francisco&state=CA&country=US" \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "accept: application/json"
+```
+
+The response includes a `businesses` array with the matching Yelp businesses, ranked by confidence. Once you have the Yelp `id`, you can store it and use it for all future Business Details lookups without re-running the match.
+
+<Warning>
+  The Business Match endpoint is intended for back-end data enrichment only.
+  Yelp IDs retrieved through Business Match may be stored for internal matching
+  purposes but must not be used as display-facing data.
+</Warning>

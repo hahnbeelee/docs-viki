@@ -1,0 +1,97 @@
+---
+title: "Yelp Platform APIs: Transactions, Bookings, and Orders"
+sidebarTitle: "Overview"
+description: "Integrate food ordering, reservations, spa bookings, and more directly into Yelp's transaction flow using the Yelp Platform partner APIs."
+---
+
+Yelp Platform lets third-party developers embed their transaction services — ordering, scheduling, reservations, and bookings — directly into Yelp's sites and apps. When you integrate through Yelp Platform, your users can complete an entire transaction without leaving Yelp, giving you access to Yelp's engaged local-discovery audience while keeping your own fulfillment infrastructure in place.
+
+<Warning>
+  Yelp Platform APIs are partner-only. Access is disabled by default. To get started, email [bizdev@yelp.com](mailto:bizdev@yelp.com) and describe your integration use case.
+</Warning>
+
+## What Yelp Platform enables
+
+Yelp Platform has launched with support for the following transaction verticals:
+
+- **Food delivery and pickup** — restaurant ordering through partner menus
+- **Spas and salons** — appointment booking for wellness services
+- **Dentist appointments** — scheduling for dental practices
+- **Restaurant reservations** — table booking through Yelp Reservations
+
+If your business falls into one of these categories, the Platform APIs give you a direct integration channel into Yelp's local business discovery pages.
+
+## Three core integration components
+
+Every Yelp Platform integration is built from three pieces that work together. You implement all three to create a seamless end-to-end transaction experience.
+
+<Steps>
+  <Step title="Data Ingestion API">
+    Match your business listings with their corresponding Yelp business pages. The Data Ingestion API is how Yelp links the businesses in your system to the authoritative Yelp records so that your transaction services appear on the correct pages.
+  </Step>
+  <Step title="Transaction Iframe">
+    Expose your ordering or booking interface through a Yelp-hosted iframe on desktop and mobile. Yelp loads your interface inside the iframe when a user initiates a transaction, passing context like the `opportunity_token`, delivery address, and locale through URL parameters. Your iframe must be served over HTTPS and all assets must also be HTTPS to avoid mixed-content warnings.
+  </Step>
+  <Step title="Yelp Checkout API">
+    Handle orders that originate from Yelp. Once a user completes checkout on Yelp, the Checkout API lets you create, update, and cancel orders and receive real-time status notifications at your `notification_url`. Authentication uses HTTP Basic Auth over HTTPS.
+  </Step>
+</Steps>
+
+## Waitlist Partner API
+
+The Waitlist Partner API lets restaurant partners embed Yelp Guest Manager's waitlist functionality directly into their own mobile or web apps. With this API your app can display real-time wait times, let guests join a waitlist queue, create "On My Way" visits, and cancel existing visits — all without redirecting users to Yelp.
+
+### Available endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/v3/partner/restaurants` | List all locations linked to your partner account |
+| `GET` | `/v3/businesses/{id}/waitlist/status` | Get current waitlist state and estimated wait times |
+| `GET` | `/v3/businesses/{id}/waitlist/info` | Get join radius, seating preferences, and max party size |
+| `POST` | `/v3/businesses/{id}/waitlist/visits` | Add a guest to the waitlist queue |
+| `POST` | `/v3/businesses/{id}/waitlist/on-my-way` | Create an "On My Way" visit |
+| `GET` | `/v3/visits/{id}` | Retrieve details about a specific visit |
+| `POST` | `/v3/visits/{id}/cancel` | Cancel an existing visit |
+
+### Authentication
+
+The Waitlist Partner API authenticates using your **Yelp Fusion API Key** as a Bearer token in the `Authorization` header — the same credential you use for the Fusion API.
+
+```http
+Authorization: Bearer YOUR_FUSION_API_KEY
+```
+
+### Getting started with the Waitlist API
+
+To get access, email [waitlist-api-support@yelp.com](mailto:waitlist-api-support@yelp.com) and include:
+
+1. **Your Partner ID**
+2. **A CSV file** listing the Yelp business IDs you want to onboard, with an optional comment column
+
+```csv
+biz_id,comment(optional)
+c6HT44PKCaXqzN_BdgKPCw,Restaurant_1
+zT0PuDsIV-S7M-W_NaX9vw,Restaurant_2
+fFGPBtsutYpn3A155Sf75Q,Restaurant_3
+```
+
+<Note>
+  If you want to develop against a test location rather than a real Yelp business, request a test location from [waitlist-api-support@yelp.com](mailto:waitlist-api-support@yelp.com) after onboarding. Include your OAuth client ID and your Yelp restaurant customer success contact.
+</Note>
+
+## Explore the Platform APIs
+
+<CardGroup cols={2}>
+  <Card title="Reservations" icon="calendar-check" href="/platform/reservations">
+    Let users book tables at Yelp Reservations restaurants without leaving your app.
+  </Card>
+  <Card title="Checkout" icon="bag-shopping" href="/platform/checkout">
+    Process orders, schedule fulfillment, and receive real-time status notifications.
+  </Card>
+  <Card title="Conversions API" icon="chart-line" href="/platform/conversions">
+    Send offline conversion data to Yelp for attribution reporting and ROAS measurement.
+  </Card>
+  <Card title="Fusion API" icon="magnifying-glass" href="/fusion/overview">
+    Search for businesses, retrieve details, and access reviews through the core Fusion API.
+  </Card>
+</CardGroup>

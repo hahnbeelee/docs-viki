@@ -1,0 +1,146 @@
+---
+title: "GET /v3/businesses/{id}/review_highlights — Review Highlights"
+sidebarTitle: "Review Highlights"
+description: "Retrieve AI-curated review highlights for a Yelp business — key phrases mentioned frequently by reviewers alongside supporting excerpts."
+---
+
+The Review Highlights endpoint returns a curated set of phrases that frequently appear across a business's reviews, along with supporting excerpt snippets. This makes it easy to surface the themes that customers care about most — like "wood-fired pizza", "friendly staff", or "great happy hour" — without having to process raw review text yourself. This endpoint requires a **Premium plan**.
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/businesses/{id}/review_highlights
+```
+
+## Authentication
+
+Include your API key as a Bearer token in the `Authorization` header of every request.
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+<Note>
+  **Premium plan required.** This endpoint is not available on Base or Enhanced plans. To upgrade your plan, visit the [Yelp Places pricing page](https://business.yelp.com/data/products/fusion/).
+</Note>
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The Yelp business ID or alias for the business whose review highlights you want to retrieve. You can obtain this from the [Business Search](/reference/business-search), [Business Details](/reference/business-details), or [Business Match](/reference/business-match) endpoints.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url 'https://api.yelp.com/v3/businesses/north-india-restaurant-san-francisco/review_highlights' \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+```
+
+```python Python
+import requests
+
+business_id = "north-india-restaurant-san-francisco"
+url = f"https://api.yelp.com/v3/businesses/{business_id}/review_highlights"
+headers = {"Authorization": "Bearer YOUR_API_KEY"}
+
+response = requests.get(url, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const businessId = "north-india-restaurant-san-francisco";
+const response = await axios.get(
+  `https://api.yelp.com/v3/businesses/${businessId}/review_highlights`,
+  { headers: { Authorization: "Bearer YOUR_API_KEY" } }
+);
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "review_highlights": [
+    {
+      "phrase": "lunch buffet",
+      "count": 87,
+      "review_excerpts": [
+        {
+          "text": "The lunch buffet here is absolutely incredible — every dish is perfectly spiced and the naan is freshly baked.",
+          "rating": 5,
+          "time_created": "2024-10-12 12:30:00"
+        },
+        {
+          "text": "Best lunch buffet in the city. I come every week and there's always something new on the spread.",
+          "rating": 5,
+          "time_created": "2024-09-05 13:15:00"
+        }
+      ]
+    },
+    {
+      "phrase": "friendly staff",
+      "count": 64,
+      "review_excerpts": [
+        {
+          "text": "The friendly staff greeted us immediately and made excellent recommendations from the menu.",
+          "rating": 4,
+          "time_created": "2024-11-01 19:45:00"
+        }
+      ]
+    },
+    {
+      "phrase": "butter chicken",
+      "count": 52,
+      "review_excerpts": [
+        {
+          "text": "The butter chicken is creamy, rich, and perfectly balanced. Easily the best I've had outside of India.",
+          "rating": 5,
+          "time_created": "2024-10-28 20:10:00"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Response Fields
+
+<ResponseField name="review_highlights" type="array">
+  Array of review highlight objects, ordered by the frequency of mention across all reviews.
+
+  <Expandable title="Review highlight object fields">
+    <ResponseField name="phrase" type="string">
+      A key phrase or topic that appears frequently across the business's reviews. Examples: `"outdoor seating"`, `"happy hour"`, `"crispy crust"`.
+    </ResponseField>
+    <ResponseField name="count" type="integer">
+      The number of reviews that mention this phrase or a closely related variation.
+    </ResponseField>
+    <ResponseField name="review_excerpts" type="array">
+      An array of review excerpt objects that contain this phrase, providing context for how customers use the term.
+
+      <Expandable title="Review excerpt fields">
+        <ResponseField name="text" type="string">
+          A short excerpt from a review that contains or references the highlight phrase.
+        </ResponseField>
+        <ResponseField name="rating" type="integer">
+          Star rating of the review this excerpt is drawn from (1–5).
+        </ResponseField>
+        <ResponseField name="time_created" type="string">
+          Timestamp when the source review was created, in `"YYYY-MM-DD HH:MM:SS"` format.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Tip>
+  Review highlights are ideal for building summary cards or feature badges on business profile pages. Display the top 3–5 phrases to give users an at-a-glance sense of what a business is known for.
+</Tip>

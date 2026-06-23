@@ -1,0 +1,315 @@
+---
+title: "Update Business Listings with the Yelp Data Ingestion API"
+sidebarTitle: "Data Ingestion"
+description: "Programmatically update attributes for large numbers of business listings on Yelp asynchronously using a simple two-step job-based workflow."
+---
+
+The Yelp Data Ingestion API gives contracted partners a powerful way to keep business listings accurate at scale. Rather than updating businesses one at a time, you submit an ingestion job containing up to 200 businesses and their desired attribute changes, then poll for results asynchronously. The specific businesses and fields your account can modify are governed by your partner contract.
+
+<Warning>
+  **Partner API — access is disabled by default.** To request access, contact [partner-support@yelp.com](mailto:partner-support@yelp.com). See [Yelp Partner APIs](/docs/partner/overview) for details on the enablement process.
+</Warning>
+
+## Authentication
+
+The Data Ingestion API uses **Basic HTTP authentication over SSL**. Credentials are provisioned separately by your Yelp partner account team and are not the same as your Yelp Places API key.
+
+All endpoints are located at:
+
+```
+https://partner-api.yelp.com/v1/
+```
+
+Requests and responses use `application/json` encoded in UTF-8.
+
+## Rate Limits
+
+| Operation | Default limit |
+|---|---|
+| Create an ingestion job | 2,500 requests per 30 minutes |
+| Query job status | 2,500 requests per 30 minutes |
+
+## How It Works
+
+The Data Ingestion API uses a **two-step asynchronous process**:
+
+<Steps>
+  <Step title="Submit an ingestion job">
+    Send a `POST` request with a list of businesses and the attribute updates you want applied. Yelp creates a job and returns a `job_id`.
+  </Step>
+  <Step title="Poll for results">
+    Use the returned `job_id` to query job status. Individual business results report `COMPLETED`, `PROCESSING`, `REJECTED`, or `FAILED`.
+  </Step>
+</Steps>
+
+<Note>
+  Yelp takes 30–60 seconds to begin processing each job. Wait at least **5 minutes** before polling, though most jobs return a `yelp_business_id` within 1 minute.
+</Note>
+
+## Step 1 — Create an Ingestion Job
+
+### Endpoint
+
+```
+POST https://partner-api.yelp.com/v1/ingest/create
+```
+
+### Request body
+
+Each element of the `businesses` array contains three top-level keys:
+
+| Key | Description |
+|---|---|
+| `matching_criteria` | Fields used to locate the existing business on Yelp (name, address, city, state, country, postal code are required). |
+| `options` | Controls whether to create the business if not found (`create_if_missing`) and whether to use matching criteria fields as update values (`use_matching_criteria_for_update`). |
+| `update` | The attribute values you want to apply to the business. Only include fields you are intentionally changing — sending an empty string `""` or `null` **deletes** the current value. |
+| `partner_business_id` | Optional unique identifier from your system. Max 100 chars; must remain stable once set. |
+
+### Updatable attributes (contract-dependent)
+
+Common attributes you can update include:
+
+<CardGroup cols={2}>
+  <Card title="Core Listing">
+    `name`, `address1–3`, `city`, `state`, `postal_code`, `country`, `phone`, `url`, `display_url`, `hours`, `categories`
+  </Card>
+  <Card title="Media">
+    `photos` (caption + URL), `menu_url`, `menu_data`
+  </Card>
+  <Card title="Business Details">
+    `delivery`, `take_out`, `takes_reservations`, `outdoor_seating`, `parking`, `wifi`, `alcohol`, `wheelchair_accessible`
+  </Card>
+  <Card title="About the Business">
+    `about_this_business_specialties`, `about_this_business_history`, `about_this_business_year_established`
+  </Card>
+</CardGroup>
+
+<Tip>
+  Send `"categories"` only for businesses that don't already have categories. Attempts to change existing categories via the API are blocked — escalate those to [partner-support@yelp.com](mailto:partner-support@yelp.com).
+</Tip>
+
+### Example request
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://partner-api.yelp.com/v1/ingest/create \
+  -u "$PARTNER_USERNAME:$PARTNER_PASSWORD" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "businesses": [
+      {
+        "matching_criteria": {
+          "name": "Gary Danko",
+          "address1": "800 N Point St",
+          "city": "San Francisco",
+          "state": "CA",
+          "postal_code": "94109",
+          "country": "US",
+          "phone": "+14157492060",
+          "yelp_business_id": "WavvLdfdP6g8aZTtbBQHTw"
+        },
+        "options": {
+          "create_if_missing": false,
+          "use_matching_criteria_for_update": false
+        },
+        "partner_business_id": "12345",
+        "update": {
+          "url": "https://www.garydanko.com/",
+          "takes_reservations": true,
+          "hours": [
+            { "day": "monday",    "open": "17:30", "close": "22:00" },
+            { "day": "tuesday",   "open": "17:30", "close": "22:00" },
+            { "day": "wednesday", "open": "17:30", "close": "22:00" },
+            { "day": "thursday",  "open": "17:30", "close": "22:00" },
+            { "day": "friday",    "open": "17:30", "close": "22:00" },
+            { "day": "saturday",  "open": "17:30", "close": "22:00" },
+            { "day": "sunday",    "open": "17:30", "close": "22:00" }
+          ],
+          "photos": [
+            {
+              "caption": "Ahi Tuna",
+              "url": "https://www.example.com/photos/tuna.jpg"
+            }
+          ]
+        }
+      }
+    ]
+  }'
+```
+</CodeGroup>
+
+### Success response
+
+```json
+{
+  "job_id": "c6HT44PKCaXqzN_BdgKPCw"
+}
+```
+
+### Error response
+
+```json
+{
+  "error": {
+    "code": "INVALID_JSON",
+    "message": "The submitted JSON is invalid"
+  }
+}
+```
+
+## Step 2 — Check Job Status
+
+### Endpoint
+
+```
+GET https://partner-api.yelp.com/v1/ingest/status/{job_id}
+```
+
+### Example request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://partner-api.yelp.com/v1/ingest/status/c6HT44PKCaXqzN_BdgKPCw" \
+  -u "$PARTNER_USERNAME:$PARTNER_PASSWORD"
+```
+</CodeGroup>
+
+### Example response
+
+```json
+{
+  "status": "PROCESSING",
+  "created_at": "2018-09-18T23:15:04+00:00",
+  "completed_at": null,
+  "business_results": [
+    {
+      "status": "PROCESSING",
+      "yelp_business_id": "WavvLdfdP6g8aZTtbBQHTw",
+      "partner_business_id": "12345",
+      "update_results": {
+        "name": {
+          "requested_value": "Gary Danko",
+          "status": "COMPLETED"
+        },
+        "url": {
+          "requested_value": "https://www.garydanko.com",
+          "status": "PROCESSING"
+        },
+        "photos": [
+          {
+            "url": {
+              "requested_value": "https://www.example.com/photos/tuna.jpg",
+              "status": "COMPLETED"
+            },
+            "caption": {
+              "requested_value": "Ahi Tuna",
+              "status": "COMPLETED"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+### Job and business result statuses
+
+<AccordionGroup>
+  <Accordion title="Job-level statuses">
+    | Status | Meaning |
+    |---|---|
+    | `PROCESSING` | The job is still being worked on. |
+    | `APPLIED` | All businesses in the job have been processed. |
+    | `COMPLETED` | The job completed successfully. |
+    | `REJECTED` | The job was rejected (see `error`). |
+  </Accordion>
+  <Accordion title="Business-level statuses">
+    | Status | Meaning |
+    |---|---|
+    | `PROCESSING` | This business's updates are still in progress. |
+    | `COMPLETED` | All updates for this business finished. |
+    | `REJECTED` | The business was rejected (e.g., `BUSINESS_MATCH_FAILED`). |
+    | `FAILED` | An internal error occurred. Retry later. |
+  </Accordion>
+  <Accordion title="Attribute-level statuses">
+    | Status | Meaning |
+    |---|---|
+    | `PROCESSING` | The attribute update is still being applied. |
+    | `COMPLETED` | The attribute was successfully updated. |
+    | `APPLIED` | The attribute was applied (used for some attribute types). |
+    | `REJECTED` | The attribute update was rejected (see `error`). |
+  </Accordion>
+</AccordionGroup>
+
+## Business Claiming
+
+The Data Ingestion API also supports **creating and claiming a business in a single API call**. By including a `partner_biz_claim` object inside `update`, you can simultaneously create a new listing and initiate a claim for the business owner — all in one request.
+
+```json
+{
+  "businesses": [{
+    "matching_criteria": {
+      "name": "BoJack's Restaurant",
+      "address1": "15 Hollywoo St",
+      "city": "Los Angeles",
+      "state": "CA",
+      "country": "US",
+      "postal_code": "90210"
+    },
+    "options": {
+      "create_if_missing": true,
+      "use_matching_criteria_for_update": true
+    },
+    "update": {
+      "categories": ["newamerican"],
+      "partner_biz_claim": {
+        "owner_account": {
+          "first_name": "John",
+          "last_name": "Doe",
+          "email": "john.doe@bojackrestaurant.com"
+        }
+      }
+    }
+  }]
+}
+```
+
+After Yelp's User Operations team approves the new listing (typically 1–2 business days), the business owner receives an email to complete the claim. You can check claim status using `GET /v2/partner_biz_claim/request/status`.
+
+<Note>
+  New businesses created via the API cannot be claimed immediately — the listing must be approved by Yelp's User Ops team first.
+</Note>
+
+## Allowlisting Businesses
+
+<Warning>
+  Businesses **not pre-submitted** to [partner-support@yelp.com](mailto:partner-support@yelp.com) for allowlisting will be treated as fraudulent/fake listings by Yelp's moderation systems. Always work with your partner support contact to allowlist your business portfolio before sending updates.
+</Warning>
+
+## Frequently Asked Questions
+
+<AccordionGroup>
+  <Accordion title="Is there a separate test or sandbox environment?">
+    No. Testing happens directly in production. Work with your Yelp account team to identify safe test listings and avoid unintended changes to live business data.
+  </Accordion>
+  <Accordion title="How quickly are updates published on Yelp?">
+    It depends on data quality. High-confidence updates may be published automatically; others are routed to a moderation queue and can take up to 2 weeks to be reviewed. Permissions are set at the attribute level, so `hours` might auto-publish while `url` goes to the queue.
+  </Accordion>
+  <Accordion title="What countries are supported?">
+    Partners are authorized to update businesses in the US, Canada, and US territories (Puerto Rico, Guam, and US Virgin Islands).
+  </Accordion>
+  <Accordion title="Can we update categories for a listing?">
+    Only if the business has no existing categories. Once categories exist on Yelp, the API blocks changes. To modify existing categories, escalate to [partner-support@yelp.com](mailto:partner-support@yelp.com).
+  </Accordion>
+  <Accordion title="Can we delete photos?">
+    You can only delete photos that were originally added by your partner account.
+  </Accordion>
+  <Accordion title="How do we temporarily close a business?">
+    Set `"temporarily_closed": "mm/dd/yyyy"` with a future date. To reopen a business, submit `"temporarily_closed": ""` (empty string). If there's no known reopening date, set the date 10+ years in the future — Yelp will display the listing as temporarily closed without an estimated reopening date.
+  </Accordion>
+  <Accordion title="Can we submit UTM parameters in URLs?">
+    No. Submit only the organic page URL. UTM parameters are not accepted.
+  </Accordion>
+</AccordionGroup>

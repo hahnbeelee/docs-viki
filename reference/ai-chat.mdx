@@ -1,0 +1,337 @@
+---
+title: "POST /ai/chat/v2 — Yelp AI Conversational Search API"
+sidebarTitle: "AI Chat"
+description: "Build conversational local business discovery with natural language queries. Returns AI-generated answers, structured business data, and multi-turn session support."
+---
+
+The Yelp AI Chat endpoint powers conversational local business discovery. You send a natural language query — such as "What's a good vegan pizza place near me?" — and receive a human-readable AI response alongside structured business data including locations, ratings, summaries, photos, and review snippets. The API supports multi-turn conversations: once you receive a `chat_id` in the first response, include it in subsequent requests to maintain context across the session.
+
+## Endpoint
+
+```
+POST https://api.yelp.com/ai/chat/v2
+```
+
+## Authentication
+
+Include your API key as a Bearer token in the `Authorization` header of every request.
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+<Note>
+  **Premium plan required** for full access to the Yelp AI Chat endpoint. Visit the [Yelp Places pricing page](https://business.yelp.com/data/products/fusion/) to review plan options.
+</Note>
+
+## Request Body
+
+The request body must be JSON (`Content-Type: application/json`).
+
+<ParamField body="query" type="string" required>
+  The user's natural language question or request. Accepts any prompt related to Yelp businesses, such as `"Can you find a Thai restaurant near me?"` or `"What are some romantic dinner spots in Chicago?"`.
+
+  - Must be plain text — no special formatting required.
+  - Maximum length: **1000 characters**.
+</ParamField>
+
+<ParamField body="chat_id" type="string">
+  Session identifier for multi-turn conversations. Behavior by value:
+  - **Omitted or `null`**: starts a new conversation; the response contains a fresh `chat_id`.
+  - **Valid `chat_id`**: continues the existing session; the AI retains context from prior turns.
+  - **Invalid `chat_id`**: returns a `400 Bad Request` error.
+</ParamField>
+
+<ParamField body="user_context" type="object">
+  Optional location data to help the AI surface geographically relevant results. Highly recommended for location-based queries.
+
+  <Expandable title="user_context fields">
+    <ParamField body="latitude" type="number">
+      User's current latitude. Used to bias business recommendations to the user's location.
+    </ParamField>
+    <ParamField body="longitude" type="number">
+      User's current longitude.
+    </ParamField>
+    <ParamField body="locale" type="string">
+      Locale code such as `"en_US"` or `"fr_FR"` to localize the AI response.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="request_context" type="object">
+  Optional settings that control how the API processes the request and formats the response.
+
+  <Expandable title="request_context fields">
+    <ParamField body="(various)" type="any">
+      Controls response format and content generation behavior. Refer to the Yelp AI API reference for the full list of supported keys.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Example Requests
+
+<CodeGroup>
+
+```bash First Request (new conversation)
+curl --request POST \
+  --url 'https://api.yelp.com/ai/chat/v2' \
+  --header 'Authorization: Bearer YOUR_API_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "query": "What'\''s a good vegan pizza place near me?",
+    "user_context": {
+      "latitude": 40.7128,
+      "longitude": -74.0060,
+      "locale": "en_US"
+    }
+  }'
+```
+
+```bash Follow-up Request (continuing conversation)
+curl --request POST \
+  --url 'https://api.yelp.com/ai/chat/v2' \
+  --header 'Authorization: Bearer YOUR_API_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "query": "What are their opening hours?",
+    "chat_id": "7ac95mkCJBR9WVPfpf3R_w"
+  }'
+```
+
+```python Python
+import requests
+
+url = "https://api.yelp.com/ai/chat/v2"
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json"
+}
+
+# First request
+payload = {
+    "query": "What's a good vegan pizza place near me?",
+    "user_context": {
+        "latitude": 40.7128,
+        "longitude": -74.0060
+    }
+}
+response = requests.post(url, headers=headers, json=payload)
+data = response.json()
+
+chat_id = data["chat_id"]
+
+# Follow-up request
+followup_payload = {
+    "query": "What are their opening hours?",
+    "chat_id": chat_id
+}
+followup = requests.post(url, headers=headers, json=followup_payload)
+print(followup.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const url = "https://api.yelp.com/ai/chat/v2";
+const headers = {
+  Authorization: "Bearer YOUR_API_KEY",
+  "Content-Type": "application/json",
+};
+
+// First request
+const first = await axios.post(url, {
+  query: "What's a good vegan pizza place near me?",
+  user_context: { latitude: 40.7128, longitude: -74.006 },
+}, { headers });
+
+const chatId = first.data.chat_id;
+
+// Follow-up request
+const followUp = await axios.post(url, {
+  query: "What are their opening hours?",
+  chat_id: chatId,
+}, { headers });
+
+console.log(followUp.data);
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "chat_id": "7ac95mkCJBR9WVPfpf3R_w",
+  "response": {
+    "text": "I found a few great vegan pizza options nearby. Double Zero is a fully vegan pizzeria with cashew cheese and truffle pizzas and a trendy vibe. Norm's Pizza offers naturally leavened dough and classic NY-style slices, while Underground Pizza features gluten-free and keto options with a crispy thin crust.",
+    "tags": [
+      {
+        "tag_type": "business",
+        "start": 48,
+        "end": 59,
+        "meta": { "business_id": "EBK0OkVMBg_n_KxAU_4DZg" }
+      },
+      {
+        "tag_type": "highlight",
+        "start": 91,
+        "end": 123
+      },
+      {
+        "tag_type": "business",
+        "start": 143,
+        "end": 155,
+        "meta": { "business_id": "Qr9FJkZAzav9px3xsEf1yQ" }
+      }
+    ]
+  },
+  "types": ["business_search"],
+  "entities": [
+    {
+      "businesses": [
+        {
+          "id": "EBK0OkVMBg_n_KxAU_4DZg",
+          "alias": "double-zero-new-york-5",
+          "name": "Double Zero",
+          "url": "https://www.yelp.com/biz/double-zero-new-york-5",
+          "phone": "+12127771608",
+          "rating": 4.3,
+          "review_count": 662,
+          "price": "$$",
+          "categories": [
+            { "alias": "pizza", "title": "Pizza" },
+            { "alias": "italian", "title": "Italian" }
+          ],
+          "coordinates": {
+            "latitude": 40.7260895,
+            "longitude": -73.9897998
+          },
+          "location": {
+            "address1": "65 2nd Ave",
+            "city": "New York",
+            "state": "NY",
+            "zip_code": "10003",
+            "country": "US",
+            "formatted_address": "65 2nd Ave\nNew York, NY 10003"
+          },
+          "summaries": {
+            "short": "Vegan pizzeria with a wood-burning oven offering cashew cheese and truffle pizzas.",
+            "medium": "Vegan Italian restaurant with indoor seating offering a casual ambiance and outdoor seating with a street view. The menu includes a diverse selection of pizzas, pastas, and small plates, all crafted with plant-based ingredients.",
+            "long": "Vegan Italian restaurant with indoor seating offering a casual ambiance and outdoor seating with a street view. The menu includes a diverse selection of pizzas, pastas, and small plates, all crafted with plant-based ingredients. The establishment features a thin, crispy crust and creative toppings like truffle mushrooms and cashew cheese. The restaurant caters to both vegans and non-vegans, with gluten-free options and accommodating service."
+          },
+          "contextual_info": {
+            "photos": [
+              { "original_url": "https://s3-media0.fl.yelpcdn.com/bphoto/Aea3haoOsIyHF__Lksp7hQ/o.jpg" }
+            ],
+            "review_snippets": [],
+            "review_snippet": "I wouldn't come back since I prefer non [[HIGHLIGHT]]vegan pizza[[ENDHIGHLIGHT]] but the service and ambiance is good...",
+            "business_hours": [],
+            "summary": null
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Response Fields
+
+<ResponseField name="chat_id" type="string">
+  A unique identifier for this conversation session. Pass this value as `chat_id` in your next request to continue the same conversation. Store it per-user session on your end.
+</ResponseField>
+
+<ResponseField name="response" type="object">
+  The AI-generated response to the user's query.
+
+  <Expandable title="response fields">
+    <ResponseField name="response.text" type="string">
+      The AI's primary natural language answer to the user's query.
+    </ResponseField>
+    <ResponseField name="response.tags" type="array">
+      An array of span annotations over `response.text`. Each tag identifies a named entity or highlight within the text so you can render links or callouts inline.
+
+      <Expandable title="Tag object fields">
+        <ResponseField name="tag_type" type="string">
+          Type of annotation. Values: `"business"` (a business name mentioned in the text) or `"highlight"` (a notable phrase).
+        </ResponseField>
+        <ResponseField name="start" type="integer">
+          Character index in `response.text` where the span begins (inclusive).
+        </ResponseField>
+        <ResponseField name="end" type="integer">
+          Character index in `response.text` where the span ends (exclusive).
+        </ResponseField>
+        <ResponseField name="meta" type="object">
+          Additional data for the tag. For `tag_type: "business"`, contains `business_id` — the Yelp ID matching the business mentioned at this span.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="types" type="array">
+  Array of strings describing the nature of the response. Possible values:
+  - `"business_search"` — the AI returned a list of matching businesses
+  - `"business_question"` — the AI answered a factual question about specific businesses
+  - `"reservation"` — the AI is facilitating a reservation flow
+</ResponseField>
+
+<ResponseField name="entities" type="array">
+  Structured data associated with the response. Each element is an entity group containing a `businesses` array with full business objects.
+
+  <Expandable title="Business entity fields">
+    <ResponseField name="id" type="string">Yelp business ID.</ResponseField>
+    <ResponseField name="alias" type="string">URL-safe business slug.</ResponseField>
+    <ResponseField name="name" type="string">Business display name.</ResponseField>
+    <ResponseField name="url" type="string">Yelp business page URL.</ResponseField>
+    <ResponseField name="phone" type="string">Phone number in E.164 format.</ResponseField>
+    <ResponseField name="rating" type="number">Yelp rating from 1.0 to 5.0.</ResponseField>
+    <ResponseField name="review_count" type="integer">Total number of Yelp reviews.</ResponseField>
+    <ResponseField name="price" type="string">Price level: `"$"` through `"$$$$"`.</ResponseField>
+    <ResponseField name="categories" type="array">Business categories with `alias` and `title`.</ResponseField>
+    <ResponseField name="coordinates" type="object">Geographic coordinates (`latitude`, `longitude`).</ResponseField>
+    <ResponseField name="location" type="object">
+      Address details including `address1`, `city`, `state`, `zip_code`, `country`, and `formatted_address`.
+    </ResponseField>
+    <ResponseField name="summaries" type="object">
+      AI-generated business summaries at three levels of detail:
+      - `short` — one-sentence summary, ideal for list previews
+      - `medium` — two to three sentences for cards or panels
+      - `long` — full paragraph for detail views
+    </ResponseField>
+    <ResponseField name="contextual_info" type="object">
+      Dynamic context relevant to the user's specific query.
+
+      <Expandable title="contextual_info fields">
+        <ResponseField name="photos" type="array">Array of photo objects with `original_url`.</ResponseField>
+        <ResponseField name="review_snippets" type="array">Array of highlighted review snippets related to the query context.</ResponseField>
+        <ResponseField name="review_snippet" type="string">A single highlighted review excerpt with `[[HIGHLIGHT]]` and `[[ENDHIGHLIGHT]]` markers.</ResponseField>
+        <ResponseField name="business_hours" type="array">
+          When the user asks about hours, contains an array of daily schedule objects with `day_of_week`, `business_hours` (list of `open_time`/`close_time` pairs), and `special_hours_applied` (boolean).
+        </ResponseField>
+        <ResponseField name="summary" type="string">A contextually generated summary of the business based on the user's specific query. May be `null` if not applicable.</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## HTTP Status Codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success — response body contains the AI reply and structured data. |
+| `400` | Bad Request — malformed JSON, missing required fields, or invalid `chat_id`. |
+| `401` | Unauthorized — invalid or expired API key. See `code` field: `UNAUTHORIZED_API_KEY` or `TOKEN_INVALID`. |
+| `403` | Forbidden — your plan does not have access to this endpoint. |
+| `404` | Not Found — the requested resource does not exist. |
+| `413` | Payload Too Large — the `query` field exceeds the 1000-character limit. |
+| `429` | Rate Limited — you have exceeded your daily quota or queries-per-second limit. Back off and retry. |
+| `500` | Internal Server Error — an unexpected error on Yelp's side. Retry with exponential backoff. |
+| `503` | Service Unavailable — the AI service is temporarily down. Retry after a short delay. |
+
+<Warning>
+  When you receive a `429` response, reduce your request rate before retrying. For production applications, implement exponential backoff with jitter to handle rate limit responses gracefully.
+</Warning>
+
+<Tip>
+  Use the `tags` array to render business names in `response.text` as interactive links. Extract the character span (`start` to `end`) and match it to the `business_id` in `meta` to link directly to that business's profile or to the structured data in `entities`.
+</Tip>

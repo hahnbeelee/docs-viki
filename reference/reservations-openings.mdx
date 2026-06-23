@@ -1,0 +1,109 @@
+---
+title: "GET /v3/bookings/{id}/openings — Available Reservation Slots"
+sidebarTitle: "Openings"
+description: "Retrieve available reservation time slots for a Yelp Reservations business. Returns all open times for a given date, party size, and preferred time."
+---
+
+The Openings endpoint is the first step in the Yelp Reservations booking flow. After identifying a business that supports Yelp Reservations (via Business Search), you call this endpoint with a date, time, and party size to get all available time slots. Each available slot in the response includes a `hold_token` that you pass to the [Holds endpoint](/reference/reservations-holds) to reserve the slot while the user fills in their details.
+
+<Warning>
+  **Partner API — Access disabled by default.** The Reservations API is available only to Yelp partners. Apply for access at [yelp.com/fusion/vip/apply](https://www.yelp.com/fusion/vip/apply). Authenticate with your Yelp Places API Key (`Authorization: Bearer YOUR_API_KEY`).
+</Warning>
+
+<Note>
+  Testing is done in the production environment — not a sandbox. Yelp provisions test business IDs for use during development. Do not book reservations at real Yelp businesses while testing.
+</Note>
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/bookings/{business_id}/openings
+```
+
+## Path Parameters
+
+<ParamField path="business_id" type="string" required>
+  The Yelp business ID for the restaurant you are checking availability for.
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="date" type="string">
+  The desired reservation date in `YYYY-MM-DD` format. Defaults to today if not provided.
+</ParamField>
+
+<ParamField query="time" type="string">
+  The desired reservation time in `HH:MM` (24-hour) format. The response will include available slots near this time.
+</ParamField>
+
+<ParamField query="covers" type="integer">
+  The number of people in the party (party size). Required to filter by tables that can accommodate the group.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/bookings/north-india-restaurant-san-francisco/openings?date=2024-08-15&time=19:00&covers=2" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "openings": [
+    {
+      "date": "2024-08-15",
+      "time": "18:45",
+      "covers": 2,
+      "hold_token": "ht_Abc123XyzDefGhi456",
+      "slot_id": "slot_001"
+    },
+    {
+      "date": "2024-08-15",
+      "time": "19:00",
+      "covers": 2,
+      "hold_token": "ht_Def456UvwJkl789",
+      "slot_id": "slot_002"
+    },
+    {
+      "date": "2024-08-15",
+      "time": "19:30",
+      "covers": 2,
+      "hold_token": "ht_Ghi789MnoQrs012",
+      "slot_id": "slot_003"
+    }
+  ]
+}
+```
+
+## Response Fields
+
+<ResponseField name="openings" type="array">
+  List of available reservation time slots.
+
+  <Expandable title="Opening slot fields">
+    <ResponseField name="date" type="string">
+      Date of this available slot in `YYYY-MM-DD` format.
+    </ResponseField>
+    <ResponseField name="time" type="string">
+      Time of this available slot in `HH:MM` (24-hour) format.
+    </ResponseField>
+    <ResponseField name="covers" type="integer">
+      Party size this slot can accommodate.
+    </ResponseField>
+    <ResponseField name="hold_token" type="string">
+      Token identifying this specific slot. Pass this value to the [Holds endpoint](/reference/reservations-holds) to reserve this slot while the user completes the booking form.
+    </ResponseField>
+    <ResponseField name="slot_id" type="string">
+      Internal identifier for this slot.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Tip>
+  The `hold_token` from an opening is short-lived. Move the user to the hold step promptly after they select a time — don't store tokens for later use.
+</Tip>

@@ -1,0 +1,164 @@
+---
+title: "GET /v3/transactions/{type}/search — Food Delivery Search"
+sidebarTitle: "Transaction Search"
+description: "Search for businesses that support food delivery transactions using the Yelp Transaction Search endpoint. Returns a list of delivery-eligible businesses."
+---
+
+The Transaction Search endpoint lets you find businesses that support on-demand food delivery transactions through Yelp. Currently, `delivery` is the only supported transaction type. You must supply either a geographic coordinate pair (`latitude` + `longitude`) or a `location` string to anchor the search — delivery availability depends on where the delivery is headed, so location is always required.
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/transactions/{transaction_type}/search
+```
+
+<Note>
+  Authenticate all requests with your private API Key in the `Authorization` header: `Authorization: Bearer YOUR_API_KEY`.
+</Note>
+
+## Path Parameters
+
+<ParamField path="transaction_type" type="string" required>
+  The type of transaction to search for. Currently only `delivery` is supported.
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="latitude" type="number">
+  Latitude of the location to deliver to. Required if `location` is not provided. Must be paired with `longitude`.
+</ParamField>
+
+<ParamField query="longitude" type="number">
+  Longitude of the location to deliver to. Required if `location` is not provided. Must be paired with `latitude`.
+</ParamField>
+
+<ParamField query="location" type="string">
+  A string describing the delivery location (e.g., address, city, neighborhood). Required if `latitude` and `longitude` are not provided.
+</ParamField>
+
+<ParamField query="term" type="string">
+  Optional search term to filter results (e.g., `"pizza"`, `"sushi"`).
+</ParamField>
+
+<ParamField query="radius" type="integer">
+  Search radius in meters. Maximum value is `40000` (about 25 miles). Defaults to the best-fit radius for the location.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Number of results to return. Defaults to `20`; maximum is `50`.
+</ParamField>
+
+<ParamField query="offset" type="integer">
+  Offset for pagination. Use with `limit` to page through results.
+</ParamField>
+
+<ParamField query="locale" type="string">
+  Locale code for the response language and region (e.g., `en_US`, `fr_FR`). Defaults to `en_US`.
+</ParamField>
+
+<ParamField query="price" type="string">
+  Filter by price level. Comma-delimited list of values: `1` ($), `2` ($$), `3` ($$$), `4` ($$$$). Example: `price=1,2` returns $ and $$ results.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/transactions/delivery/search?latitude=37.786882&longitude=-122.399972" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "total": 25,
+  "businesses": [
+    {
+      "id": "north-india-restaurant-san-francisco",
+      "name": "North India Restaurant",
+      "rating": 4,
+      "review_count": 551,
+      "price": "$$",
+      "phone": "+14155551234",
+      "url": "https://www.yelp.com/biz/north-india-restaurant-san-francisco",
+      "image_url": "https://s3-media1.fl.yelpcdn.com/bphoto/example/o.jpg",
+      "categories": [
+        {
+          "alias": "indpak",
+          "title": "Indian"
+        }
+      ],
+      "coordinates": {
+        "latitude": 37.787789,
+        "longitude": -122.399305
+      },
+      "location": {
+        "address1": "123 Second St",
+        "address2": "",
+        "address3": "",
+        "city": "San Francisco",
+        "state": "CA",
+        "zip_code": "94105",
+        "country": "US"
+      },
+      "transactions": ["delivery"]
+    }
+  ]
+}
+```
+
+## Response Fields
+
+<ResponseField name="total" type="integer">
+  Total number of businesses matching the delivery search criteria.
+</ResponseField>
+
+<ResponseField name="businesses" type="array">
+  Array of business objects eligible for delivery. This structure mirrors the response from the Business Search endpoint.
+
+  <Expandable title="Business object fields">
+    <ResponseField name="id" type="string">
+      Unique Yelp identifier for the business (slug or encrypted ID).
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Business name.
+    </ResponseField>
+    <ResponseField name="rating" type="number">
+      Yelp star rating from 1.0 to 5.0.
+    </ResponseField>
+    <ResponseField name="review_count" type="integer">
+      Total number of reviews on Yelp.
+    </ResponseField>
+    <ResponseField name="price" type="string">
+      Price level: `$`, `$$`, `$$$`, or `$$$$`.
+    </ResponseField>
+    <ResponseField name="phone" type="string">
+      Business phone number in E.164 format.
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      URL to the Yelp business page.
+    </ResponseField>
+    <ResponseField name="image_url" type="string">
+      URL for the business's main photo.
+    </ResponseField>
+    <ResponseField name="categories" type="array">
+      List of category objects with `alias` and `title` fields.
+    </ResponseField>
+    <ResponseField name="coordinates" type="object">
+      `latitude` and `longitude` of the business.
+    </ResponseField>
+    <ResponseField name="location" type="object">
+      Structured address with `address1`, `address2`, `address3`, `city`, `state`, `zip_code`, and `country`.
+    </ResponseField>
+    <ResponseField name="transactions" type="array">
+      List of supported transaction types. Will include `"delivery"` for results from this endpoint.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Tip>
+  Pass the `latitude` and `longitude` of the delivery destination — not the user's current location — to get the most accurate delivery-eligibility results.
+</Tip>

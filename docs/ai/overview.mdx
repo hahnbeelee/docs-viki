@@ -1,0 +1,173 @@
+---
+title: "Yelp AI API: Conversational Local Business Discovery"
+sidebarTitle: "Overview"
+description: "Build chatbots, voice assistants, and smart recommendations with Yelp's local business data using natural language queries and structured responses."
+---
+
+The Yelp AI API lets you build conversational experiences for local business discovery by accepting natural language queries and returning natural language responses alongside structured business data. Whether you're developing a chatbot, integrating into a voice assistant, or enhancing your app with smart local business recommendations, the Yelp AI API delivers flexible, powerful capabilities backed by Yelp's trusted local content. A single endpoint handles the full conversation loop — from the initial search to multi-turn follow-up questions and even AI-assisted restaurant reservations.
+
+<Note>
+  The AI API is available on the **Premium plan** only. Premium accounts include **20 daily AI API calls**. To upgrade or discuss higher limits, visit the [Yelp Places API sign-up page](https://business.yelp.com/data/products/places-api/).
+</Note>
+
+## How it Works
+
+You send a `POST` request with a natural language `query` to a single endpoint. The API interprets the query, searches Yelp's business database, and returns a natural language `response.text` along with structured `entities` (business details, hours, photos, and more). For multi-turn conversations, the API issues a `chat_id` on the first response that you include in all subsequent requests to maintain context.
+
+**Endpoint**
+
+```
+POST https://api.yelp.com/ai/chat/v2
+```
+
+**Authentication**
+
+Use the same API key you use for the Yelp Places API, passed as a Bearer token:
+
+```
+Authorization: Bearer <Your API Key>
+```
+
+If you don't have an API key yet, see the [Yelp Places Authentication](/docs/fusion-authentication) guide.
+
+## Key Request Fields
+
+<ParamField body="query" type="string" required>
+  The user's natural-language request, up to 1,000 characters. For example: `"What's a good vegan pizza place near me?"`.
+</ParamField>
+
+<ParamField body="chat_id" type="string">
+  The session identifier returned by the previous response. Omit this field (or pass `null`) on the very first request of a conversation. Include it on all follow-up requests to maintain conversation context.
+</ParamField>
+
+<ParamField body="user_context" type="object">
+  Optional location and locale context that significantly improves result relevance.
+
+  <Expandable title="user_context fields">
+    <ParamField body="latitude" type="number">
+      The user's current latitude in decimal degrees.
+    </ParamField>
+    <ParamField body="longitude" type="number">
+      The user's current longitude in decimal degrees.
+    </ParamField>
+    <ParamField body="locale" type="string">
+      BCP 47 locale string, e.g. `"en_US"`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Key Response Fields
+
+<ResponseField name="response.text" type="string">
+  The AI's primary answer in natural language — ready to display directly to users.
+</ResponseField>
+
+<ResponseField name="response.tags[]" type="array">
+  Spans within `response.text` that mark business names and highlighted phrases. Each tag includes `tag_type` (`"business"` or `"highlight"`), `start`/`end` character positions, and (for business tags) `meta.business_id` for linking to the structured entity.
+</ResponseField>
+
+<ResponseField name="types" type="array">
+  Indicates the nature of the response. Possible values:
+
+  | Value | Meaning |
+  |---|---|
+  | `"business_search"` | Results from a location-based business search |
+  | `"business_question"` | Answer to a question about previously found businesses |
+  | `"reservation"` | Response includes reservation availability |
+</ResponseField>
+
+<ResponseField name="entities[].businesses[]" type="array">
+  Structured business records matching the query. Each business includes `id`, `name`, `location`, `coordinates`, `rating`, `price`, `categories`, `phone`, `summaries` (short/medium/long), and `contextual_info` (photos, business hours, review snippets).
+</ResponseField>
+
+<ResponseField name="chat_id" type="string">
+  The session identifier for this conversation. Pass this value back as `chat_id` in your next request to continue the same conversation thread.
+</ResponseField>
+
+## Example Request and Response
+
+```json
+POST https://api.yelp.com/ai/chat/v2
+Authorization: Bearer <Your API Key>
+Content-Type: application/json
+
+{
+  "query": "What's a good vegan pizza place near me?",
+  "user_context": {
+    "locale": "en_US",
+    "latitude": 40.7128,
+    "longitude": -74.0060
+  }
+}
+```
+
+```json
+{
+  "response": {
+    "text": "I found a few great vegan pizza options nearby. Double Zero is a fully vegan pizzeria with cashew cheese and truffle pizzas and a trendy vibe. Norm's Pizza offers naturally leavened dough and classic NY-style slices, while Underground Pizza features gluten-free and keto options with a crispy thin crust.",
+    "tags": [
+      {
+        "tag_type": "business",
+        "start": 48,
+        "end": 59,
+        "meta": { "business_id": "EBK0OkVMBg_n_KxAU_4DZg" }
+      }
+    ]
+  },
+  "types": ["business_search"],
+  "entities": [
+    {
+      "businesses": [
+        {
+          "id": "EBK0OkVMBg_n_KxAU_4DZg",
+          "name": "Double Zero",
+          "rating": 4.3,
+          "price": "$$",
+          "summaries": {
+            "short": "Vegan pizzeria with a wood-burning oven offering cashew cheese and truffle pizzas."
+          }
+        }
+      ]
+    }
+  ],
+  "chat_id": "7ac95mkCJBR9WVPfpf3R_w"
+}
+```
+
+<Tip>
+  Always pass `user_context` with latitude and longitude when you know the user's location — it dramatically improves result relevance for location-sensitive queries.
+</Tip>
+
+## What You Can Build
+
+<CardGroup cols={2}>
+  <Card title="Chatbots & Virtual Assistants" icon="comments">
+    Power conversational UIs that let users ask questions like "Find me a romantic dinner spot nearby" and receive curated results with rich business details.
+  </Card>
+  <Card title="Voice Assistants" icon="microphone">
+    Translate spoken natural language queries into local business recommendations with human-readable response text ready for text-to-speech output.
+  </Card>
+  <Card title="Smart Recommendations" icon="star">
+    Surface personalized business suggestions based on user context, preferences, and follow-up questions within the same conversation session.
+  </Card>
+  <Card title="AI-Assisted Reservations" icon="calendar">
+    Let users book restaurant tables conversationally, tapping into thousands of restaurants across the US and Canada that manage reservations through Yelp Guest Manager.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/docs/ai/quickstart">
+    Make your first API request and explore request/response structure with working code examples in Python and curl.
+  </Card>
+  <Card title="Capabilities" icon="list-check" href="/docs/ai/capabilities">
+    See exactly what query types the AI API supports today — and which ones are not yet available.
+  </Card>
+  <Card title="Agentic Integration" icon="robot" href="/docs/ai/agentic-integration">
+    Build a full LangChain + OpenAI agent that uses the Yelp AI API as a tool for sophisticated multi-turn conversations.
+  </Card>
+  <Card title="API Reference" icon="code" href="/reference/ai-chat">
+    Complete endpoint reference including all request parameters, response fields, and error codes.
+  </Card>
+</CardGroup>

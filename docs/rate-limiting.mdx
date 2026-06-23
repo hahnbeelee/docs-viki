@@ -1,0 +1,147 @@
+---
+title: "Understanding Rate Limits for the Yelp Places API"
+sidebarTitle: "Rate Limits"
+description: "Learn about QPS and daily rate limits, how to read rate-limit response headers, handle 429 errors, and request additional API calls."
+---
+
+The Yelp Places API enforces two independent types of rate limits to ensure fair and stable access for all developers: **queries-per-second (QPS)** limits and **daily call limits**. Understanding both helps you design your integration to stay within your plan's quota and gracefully handle errors when limits are reached.
+
+---
+
+## Queries-Per-Second (QPS) Limits
+
+If you send requests too rapidly in a short burst, the API returns an HTTP **429** status code with the following JSON body:
+
+```json
+{
+  "error": {
+    "code": "TOO_MANY_REQUESTS_PER_SECOND",
+    "description": "You have exceeded the queries-per-second limit for this endpoint. Try reducing the rate at which you make queries."
+  }
+}
+```
+
+If you see this error consistently, slow down your request rate by adding delays or a backoff strategy between calls. Exponential backoff is recommended for retry logic.
+
+---
+
+## Daily Call Limits
+
+In addition to QPS limiting, each plan has a maximum number of API calls per day, resetting at midnight UTC.
+
+| Plan | Daily limit |
+|---|---|
+| **Starter (Trial)** | 300 calls per 24 hours |
+| **Paid** | Up to 5,000 calls per day (30,000 per month) |
+
+<Note>
+  Your remaining call count, daily maximum, and reset time are included in the
+  response headers of **every** API response, so you can monitor usage in real time.
+</Note>
+
+### Rate-limit response headers
+
+Every response from the Yelp Places API includes these headers:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+RateLimit-DailyLimit: 500
+RateLimit-Remaining: 499
+RateLimit-ResourceDailyLimit: 100
+RateLimit-ResourceRemaining: 99
+RateLimit-ResetTime: 2024-03-28T00:00:00+00:00
+```
+
+| Header | Description |
+|---|---|
+| `RateLimit-DailyLimit` | The maximum number of calls you can make per day across all endpoints. |
+| `RateLimit-Remaining` | The number of calls remaining in the current day. |
+| `RateLimit-ResourceDailyLimit` | The maximum calls per day for the **current endpoint** (returned when a per-endpoint limit exists). |
+| `RateLimit-ResourceRemaining` | The remaining calls for the **current endpoint** today (returned when a per-endpoint limit exists). |
+| `RateLimit-ResetTime` | The [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) timestamp when the current limit window resets (midnight UTC). |
+
+You can also view your current maximum and remaining call counts at any time on the [Manage App](https://www.yelp.com/developers/v3/manage_app) page.
+
+### Daily limit exceeded error
+
+Once you exhaust your daily call quota, every subsequent request returns HTTP **429** with:
+
+```json
+{
+  "error": {
+    "code": "ACCESS_LIMIT_REACHED",
+    "description": "You've reached the access limit for this client. See instructions for requesting a higher access limit at https://docs.developer.yelp.com/docs/fusion-rate-limiting"
+  }
+}
+```
+
+Requests resume succeeding automatically after the reset time shown in `RateLimit-ResetTime`.
+
+---
+
+## Handling 429 Errors
+
+<CodeGroup>
+
+```bash cURL with retry
+# Simple retry loop — wait 1 second and try again on 429
+for i in 1 2 3; do
+  RESPONSE=$(curl --silent --write-out "%{http_code}" --output /tmp/yelp_resp.json \
+    --request GET \
+    --url "https://api.yelp.com/v3/businesses/search?term=coffee&location=Austin,TX" \
+    --header "Authorization: Bearer YOUR_API_KEY")
+  if [ "$RESPONSE" -ne 429 ]; then break; fi
+  sleep 1
+done
+cat /tmp/yelp_resp.json
+```
+
+```python Python with backoff
+import time
+import requests
+
+def search_businesses(term, location, api_key, max_retries=3):
+    url = "https://api.yelp.com/v3/businesses/search"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    params = {"term": term, "location": location}
+
+    for attempt in range(max_retries):
+        response = requests.get(url, headers=headers, params=params)
+        if response.status_code == 429:
+            wait = 2 ** attempt  # exponential backoff: 1s, 2s, 4s
+            time.sleep(wait)
+            continue
+        response.raise_for_status()
+        return response.json()
+
+    raise Exception("Rate limit exceeded after retries")
+```
+
+</CodeGroup>
+
+---
+
+## How to Get More API Calls
+
+Additional API calls beyond your plan's daily limit are granted based on actual production traffic, typically after your product has launched.
+
+During development, you can reduce your API usage by:
+
+<Tip>
+  **Cache Yelp data for up to 24 hours.** Caching search results and business
+  details dramatically reduces the number of live API calls your integration makes,
+  keeping you well within your daily limit during development.
+</Tip>
+
+- Storing `business_id` values locally and reusing them for subsequent lookups instead of re-searching.
+- Batching requests rather than making repeated single-item lookups.
+
+To request a higher access limit, email **[data-licensing@yelp.com](mailto:data-licensing@yelp.com)** from the email address associated with your Places API client. Include:
+
+- Your **Client ID** (shown on the Manage App page)
+- A description of your product or integration
+- The number of **daily requests** you need
+- Mock-ups, screenshots, or a website URL demonstrating your integration
+
+Yelp will review your request to ensure it complies with the [API Terms of Use](https://www.yelp.com/developers/api_terms) and [Display Requirements](https://www.yelp.com/developers/display_requirements). For needs exceeding **150,000 monthly API calls**, contact the sales team via the [Enterprise form](https://fusion.yelp.com/enterprise/apply/).

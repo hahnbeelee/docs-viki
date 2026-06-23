@@ -1,0 +1,175 @@
+---
+title: "GET /v3/autocomplete — Autocomplete Search Suggestions"
+sidebarTitle: "Autocomplete"
+description: "Fetch real-time autocomplete suggestions for business names, search terms, and categories as users type. Optionally scoped to a geographic location."
+---
+
+The Autocomplete endpoint returns real-time search suggestions as users type in a search box. For a given partial query string, it returns matching **terms** (keywords like "delivery"), **businesses** (by name), and **categories** (like "Delis" or "Food Delivery Services"). You should call this endpoint on each keystroke — or with a short debounce — to power a responsive typeahead search experience. Providing latitude and longitude yields location-aware suggestions.
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/autocomplete
+```
+
+## Authentication
+
+Include your API key as a Bearer token in the `Authorization` header of every request.
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Request Parameters
+
+### Required
+
+<ParamField query="text" type="string" required>
+  The partial search query string entered by the user. Must be at least **1 character** long. The suggestions returned will match this prefix.
+
+  Example: `"del"` returns suggestions like "Delivery", "Delarosa", and "Delis".
+</ParamField>
+
+### Optional
+
+<ParamField query="latitude" type="number">
+  Latitude to bias autocomplete suggestions toward nearby businesses and location-relevant terms. Recommended when building a location-aware search experience.
+</ParamField>
+
+<ParamField query="longitude" type="number">
+  Longitude to bias autocomplete suggestions toward nearby businesses. Must be provided together with `latitude`.
+</ParamField>
+
+<ParamField query="locale" type="string">
+  Locale code to return suggestions in a specific language, for example `"en_US"` or `"fr_FR"`. Defaults to `"en_US"`.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url 'https://api.yelp.com/v3/autocomplete?text=del&latitude=37.786882&longitude=-122.399972' \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+```
+
+```python Python
+import requests
+
+url = "https://api.yelp.com/v3/autocomplete"
+headers = {"Authorization": "Bearer YOUR_API_KEY"}
+params = {
+    "text": "del",
+    "latitude": 37.786882,
+    "longitude": -122.399972
+}
+
+response = requests.get(url, headers=headers, params=params)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const response = await axios.get(
+  "https://api.yelp.com/v3/autocomplete",
+  {
+    headers: { Authorization: "Bearer YOUR_API_KEY" },
+    params: {
+      text: "del",
+      latitude: 37.786882,
+      longitude: -122.399972,
+    },
+  }
+);
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "terms": [
+    { "text": "Delivery" }
+  ],
+  "businesses": [
+    {
+      "id": "YqvoyaNvtoC8N5dA8pD2JA",
+      "name": "Delfina"
+    },
+    {
+      "id": "vu6PlPyKptsT6oEq50qOzA",
+      "name": "Delarosa"
+    },
+    {
+      "id": "bai6umLcCNy9cXql0Js2RQ",
+      "name": "Pizzeria Delfina"
+    }
+  ],
+  "categories": [
+    {
+      "alias": "delis",
+      "title": "Delis"
+    },
+    {
+      "alias": "fooddeliveryservices",
+      "title": "Food Delivery Services"
+    },
+    {
+      "alias": "couriers",
+      "title": "Couriers & Delivery Services"
+    }
+  ]
+}
+```
+
+## Response Fields
+
+<ResponseField name="terms" type="array">
+  Array of search term suggestions that match the input prefix. Each object contains a single `text` field with the suggested keyword.
+
+  <Expandable title="Term object fields">
+    <ResponseField name="text" type="string">
+      The suggested search keyword, for example `"Delivery"` or `"Desserts"`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="businesses" type="array">
+  Array of Yelp business name suggestions that match the input. Scoped to nearby businesses when latitude/longitude is provided.
+
+  <Expandable title="Business suggestion fields">
+    <ResponseField name="id" type="string">
+      Unique Yelp business identifier. Pass this to the [Business Details](/reference/business-details) endpoint for full information.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Business display name matching the input prefix.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="categories" type="array">
+  Array of Yelp business category suggestions matching the input prefix.
+
+  <Expandable title="Category suggestion fields">
+    <ResponseField name="alias" type="string">
+      The category alias, for example `"delis"` or `"fooddeliveryservices"`. Use this value in the `categories` parameter of the [Business Search](/reference/business-search) endpoint.
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      Human-readable category name, for example `"Delis"` or `"Food Delivery Services"`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Implementation Tips
+
+<Tip>
+  **Debounce your requests.** Fire an autocomplete call only after the user has paused typing for 150–300ms to avoid flooding the API with every keystroke.
+</Tip>
+
+<Tip>
+  **Use selection to drive follow-up calls.** When a user selects a **term** or **category** from suggestions, pass it as the `term` or `categories` parameter to [Business Search](/reference/business-search). When they select a **business**, pass its `id` directly to [Business Details](/reference/business-details).
+</Tip>

@@ -1,0 +1,100 @@
+---
+title: "POST /v3/bookings/{id}/holds — Hold a Reservation Slot"
+sidebarTitle: "Holds"
+description: "Place a temporary hold on a reservation time slot to prevent it from being taken while the user enters their booking details. Returns a hold_id for the reservation step."
+---
+
+The Holds endpoint lets you reserve a specific time slot while the end user fills in their personal reservation details (name, phone, email). Placing a hold prevents other users from booking the same slot during that window. Once you have a `hold_id`, you pass it to the [Book Reservation endpoint](/reference/reservations-book) to complete the booking.
+
+<Warning>
+  **Partner API — Access disabled by default.** The Reservations API is available only to Yelp partners. Apply for access at [yelp.com/fusion/vip/apply](https://www.yelp.com/fusion/vip/apply). Authenticate with your Yelp Places API Key (`Authorization: Bearer YOUR_API_KEY`).
+</Warning>
+
+## Endpoint
+
+```
+POST https://api.yelp.com/v3/bookings/{business_id}/holds
+```
+
+## Path Parameters
+
+<ParamField path="business_id" type="string" required>
+  The Yelp business ID for the restaurant you are placing a hold at.
+</ParamField>
+
+## Request Body
+
+<ParamField body="date" type="string" required>
+  The reservation date in `YYYY-MM-DD` format, matching the slot selected from the Openings response.
+</ParamField>
+
+<ParamField body="time" type="string" required>
+  The reservation time in `HH:MM` (24-hour) format, matching the slot selected from the Openings response.
+</ParamField>
+
+<ParamField body="covers" type="integer" required>
+  Party size for the reservation.
+</ParamField>
+
+<ParamField body="hold_token" type="string" required>
+  The `hold_token` value returned for the specific opening slot from `GET /v3/bookings/{id}/openings`. This identifies the exact slot you want to hold.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  "https://api.yelp.com/v3/bookings/north-india-restaurant-san-francisco/holds" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date": "2024-08-15",
+    "time": "19:00",
+    "covers": 2,
+    "hold_token": "ht_Def456UvwJkl789"
+  }'
+```
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "hold_id": "hold_XyzAbcDef123",
+  "expires_at": "2024-08-15T18:55:00+00:00",
+  "date": "2024-08-15",
+  "time": "19:00",
+  "covers": 2
+}
+```
+
+## Response Fields
+
+<ResponseField name="hold_id" type="string">
+  Unique identifier for this hold. Pass this value as `hold_id` to the [Book Reservation endpoint](/reference/reservations-book). May be `null` for restaurants that require a credit card guarantee — see the note below.
+</ResponseField>
+
+<ResponseField name="expires_at" type="string">
+  ISO 8601 timestamp when this hold expires. Complete the booking before this time to avoid losing the slot.
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Confirmed date for the hold.
+</ResponseField>
+
+<ResponseField name="time" type="string">
+  Confirmed time for the hold.
+</ResponseField>
+
+<ResponseField name="covers" type="integer">
+  Confirmed party size for the hold.
+</ResponseField>
+
+<Note>
+  `hold_id` may be `null` for restaurants that require a credit card guarantee to complete the booking. In these cases, you can still proceed to the reservations step — the credit card is collected as part of the booking flow, not during the hold step.
+</Note>
+
+<Note>
+  If a user creates a new hold for the same `unique_id` (user identifier) at the same restaurant, the old hold is automatically released. You do not need to explicitly cancel the previous hold when the user changes their selected time.
+</Note>

@@ -1,0 +1,341 @@
+---
+title: "Manage Yelp Advertising Programs with the Ads API"
+sidebarTitle: "Ads API"
+description: "Create, modify, and terminate CPC, Enhanced Profile, Branded Profile, and other Yelp ad programs for your advertisers using Basic HTTP Authentication."
+---
+
+The Yelp Ads API gives advertising partners a programmatic way to manage the full lifecycle of Yelp advertising programs on behalf of their clients. With a single integration you can launch cost-per-click (CPC) campaigns with custom budgets and bidding strategies, enable profile enhancement products like Branded Profile and Enhanced Profile, and cleanly terminate programs when a client leaves — all without touching the Yelp business portal. All operations are asynchronous: each write endpoint returns a `job_id` that you poll to confirm success or diagnose failures.
+
+<Warning>
+  **This is a Yelp Partner API.** Access is disabled by default and requires a
+  separate agreement and credential provisioning by Yelp. If you do not yet
+  have access, contact your Yelp account team or visit
+  [business.yelp.com/partners](https://business.yelp.com/partners).
+</Warning>
+
+## Authentication
+
+The Ads API uses **Basic HTTP Authentication over SSL**. Supply the `username:password` pair issued to you by your Yelp account team in the `Authorization` header of every request. Ads API credentials are separate from any other Partner API credentials — do not reuse credentials across APIs.
+
+```bash
+curl -X POST \
+  --user "{username}:{password}" \
+  https://partner-api.yelp.com/v1/reseller/program/create
+```
+
+## Base URL and Versioning
+
+All Ads API endpoints are versioned and located at:
+
+```
+https://partner-api.yelp.com/v1/reseller/
+```
+
+The current version is **v1**. All date parameters must use `YYYY-MM-DD` format. All monetary values are expressed in **cents** (e.g., `5000` = $50.00).
+
+## Yelp Business IDs
+
+The Ads API requires **encrypted** Yelp Business IDs. Use the [Business Match API](https://docs.developer.yelp.com/reference/v3_business_match) to look up the correct encrypted ID for any business before creating a program.
+
+## Program Types
+
+The `program_name` parameter controls which advertising product you are creating:
+
+| Code | Product |
+|---|---|
+| `CPC` | Cost-per-click search ads |
+| `BP` | Branded Profile |
+| `EP` | Enhanced Profile (includes CTA, no competitor ads, photo sequencing) |
+| `RCA` | Remove Competitor Ads |
+| `CTA` | Call To Action |
+| `SLIDESHOW` | Slideshow |
+| `BH` | Business Highlights |
+| `VL` | Verified License |
+| `LOGO` | Logo |
+| `PORTFOLIO` | Portfolio |
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/v1/reseller/program/create` | Create a new program |
+| `POST` | `/v1/reseller/program/{program_id}/edit` | Modify an existing program |
+| `POST` | `/v1/reseller/program/{program_id}/end` | Terminate an existing program |
+| `GET` | `/v1/reseller/status/{job_id}` | Check the status of a job |
+
+---
+
+## Create Program
+
+**`POST https://partner-api.yelp.com/v1/reseller/program/create`**
+
+Creates a new advertising program for the specified Yelp business. All parameters are passed as **query string values**.
+
+### Common Parameters (all program types)
+
+<ParamField query="business_id" type="string" required>
+  The encrypted Yelp Business ID for the business. Retrieve this using the Business Match API.
+</ParamField>
+
+<ParamField query="program_name" type="string" required>
+  The advertising product to enable. See the Program Types table above for valid values (e.g., `CPC`, `BP`, `EP`).
+</ParamField>
+
+<ParamField query="start" type="date">
+  Start date in `YYYY-MM-DD` format. Programs start at 12:00 AM PST on this date. If omitted, the program starts immediately.
+</ParamField>
+
+<ParamField query="end" type="date">
+  End date in `YYYY-MM-DD` format. Programs end at 11:59 PM PST on this date. If omitted, the program runs until it is explicitly terminated via the API.
+</ParamField>
+
+<ParamField query="promotion_code" type="string">
+  A valid promotion code to associate a discount with the program. Only new advertisers (no Yelp advertising in the past 6 months) are eligible.
+</ParamField>
+
+### CPC-Specific Parameters
+
+<ParamField query="budget" type="integer" required>
+  Monthly budget in **cents**. Minimum value is `2500` ($25.00). Example: `20000` = $200.00.
+</ParamField>
+
+<ParamField query="is_autobid" type="boolean" required>
+  Set to `true` to let Yelp automatically manage bidding. Set to `false` to supply your own `max_bid`. When `is_autobid` is `true`, the default `pacing_method` is `"paced"`.
+</ParamField>
+
+<ParamField query="max_bid" type="integer">
+  Maximum bid per click in **cents**. Required when `is_autobid` is `false`. Minimum value is `50` ($0.50). Example: `500` = $5.00. Changes can take up to 24 hours to go live.
+</ParamField>
+
+<ParamField query="pacing_method" type="string">
+  Controls how the monthly budget is spent. Valid values: `"paced"` (spread evenly throughout the month — default when `is_autobid=true`) or `"unpaced"` (spend as fast as possible — default when `max_bid` is set). Contact [partner-support@yelp.com](mailto:partner-support@yelp.com) before using unpaced campaigns.
+</ParamField>
+
+<ParamField query="fee_period" type="string">
+  Budget reset cycle. Valid values: `CALENDAR_MONTH` (resets on the 1st of each month, default) or `ROLLING_MONTH` (resets every 30 days). Cannot be changed after the program starts.
+</ParamField>
+
+<ParamField query="currency" type="string">
+  [ISO 4217](http://www.xe.com/iso4217.php) currency code. Defaults to `USD`.
+</ParamField>
+
+<ParamField query="ad_categories" type="list of strings">
+  Run the CPC campaign only for specific business categories. Use the `alias` values from the business's `categories[]` array (retrieved via the [Get Business by ID](https://docs.developer.yelp.com/reference/v3_business_info) endpoint). Useful for running separate campaigns with different budgets per service category.
+</ParamField>
+
+<Note>
+  For CPC programs, the business listing **must have** text in the specialties field (set via the Data Ingestion API's `about_this_business_specialties` field) and **at least one category** to appear in Yelp search results.
+</Note>
+
+### Example: Create a CPC Program
+
+```bash
+curl \
+  -X POST \
+  --user "{username}:{password}" \
+  "https://partner-api.yelp.com/v1/reseller/program/create?\
+business_id=WavvLdfdP6g8aZTtbBQHTw\
+&program_name=CPC\
+&budget=20000\
+&max_bid=500\
+&is_autobid=false\
+&start=2016-01-01\
+&end=2016-01-31"
+```
+
+```json
+{
+  "job_id": "prvtN-nilb4mUynGGgKuBQ"
+}
+```
+
+### Example: Create a Branded Profile (starts immediately)
+
+```bash
+curl \
+  -X POST \
+  --user "{username}:{password}" \
+  "https://partner-api.yelp.com/v1/reseller/program/create?\
+business_id=WavvLdfdP6g8aZTtbBQHTw\
+&program_name=BP"
+```
+
+```json
+{
+  "job_id": "prvtN-nilb4mUynGGgKuBQ"
+}
+```
+
+---
+
+## Modify Program
+
+**`POST https://partner-api.yelp.com/v1/reseller/program/{program_id}/edit`**
+
+Modifies an existing program. You cannot set an `end` date in the past, change a `start` date for a program that has already begun, or set a `start` date before the current time.
+
+### CPC Edit Parameters
+
+<ParamField query="budget" type="integer">
+  New monthly budget in cents. Takes effect immediately unless `future_budget_date` is specified. Cannot be decreased below the amount already spent in the current period.
+</ParamField>
+
+<ParamField query="future_budget_date" type="date">
+  Schedule a budget change to take effect on a future date (`YYYY-MM-DD`). If omitted, the budget change applies immediately.
+</ParamField>
+
+<ParamField query="max_bid" type="integer">
+  New maximum bid in cents. Can only be changed if the program is currently using a `max_bid` (i.e., not in autobid mode). Minimum value is `50` ($0.50).
+</ParamField>
+
+<ParamField query="pacing_method" type="string">
+  Change pacing between `"paced"` and `"unpaced"`.
+</ParamField>
+
+<ParamField query="ad_categories" type="list of strings">
+  Update the list of category aliases to target. Replaces the current list.
+</ParamField>
+
+### Example: Modify Budget and Max Bid
+
+```bash
+curl \
+  --user "{username}:{password}" \
+  -X POST \
+  "https://partner-api.yelp.com/v1/reseller/program/c6HT44PKCaXqzN_BdgKPCw/edit?\
+budget=25000\
+&max_bid=1000"
+```
+
+```json
+{
+  "job_id": "yf8sGfL9NNRpHoXmKudBwg"
+}
+```
+
+---
+
+## Terminate Program
+
+**`POST https://partner-api.yelp.com/v1/reseller/program/{program_id}/end`**
+
+Immediately ends the specified program. Once terminated, the `program_id` remains queryable via the status endpoint as long as the program had actually started. If you terminate a program before its start date, the `program_id` is invalidated.
+
+```bash
+curl \
+  -X POST \
+  --user "{username}:{password}" \
+  https://partner-api.yelp.com/v1/reseller/program/c6HT44PKCaXqzN_BdgKPCw/end
+```
+
+```json
+{
+  "job_id": "prvtN-nilb4mUynGGgKuBQ"
+}
+```
+
+---
+
+## Check Job Status
+
+**`GET https://partner-api.yelp.com/v1/reseller/status/{job_id}`**
+
+All write operations are processed asynchronously. Poll this endpoint with the `job_id` returned by a create, modify, or terminate call to determine whether the operation succeeded, is still processing, or was rejected.
+
+```bash
+curl \
+  -X GET \
+  -H "Accept: application/json" \
+  --user "{username}:{password}" \
+  https://partner-api.yelp.com/v1/reseller/status/prvtN-nilb4mUynGGgKuBQ
+```
+
+A completed CPC create job returns a response like this:
+
+```json
+{
+  "status": "COMPLETED",
+  "completed_at": "2016-01-01T00:05:00Z",
+  "created_at": "2016-01-01T00:00:00Z",
+  "business_results": [
+    {
+      "status": "COMPLETED",
+      "identifier_type": "BUSINESS",
+      "identifier": "WavvLdfdP6g8aZTtbBQHTw",
+      "update_results": {
+        "program_added": {
+          "start": { "status": "COMPLETED", "requested_value": "2016-01-01T00:00:00Z" },
+          "program_name": { "status": "COMPLETED", "requested_value": "CPC" },
+          "end": { "status": "COMPLETED", "requested_value": "2016-01-31T23:59:00Z" },
+          "program_id": { "status": "COMPLETED", "requested_value": "c6HT44PKCaXqzN_BdgKPCw" },
+          "yelp_business_id": { "status": "COMPLETED", "requested_value": "WavvLdfdP6g8aZTtbBQHTw" },
+          "is_autobid": { "status": "COMPLETED", "requested_value": false },
+          "max_bid": { "status": "COMPLETED", "requested_value": 500 },
+          "budget": { "status": "COMPLETED", "requested_value": 20000 }
+        }
+      }
+    }
+  ]
+}
+```
+
+<Tip>
+  The top-level `status` field reflects the overall job. The nested
+  `business_results[].status` and `update_results.program_added.status` fields
+  can each independently be `COMPLETED`, `PROCESSING`, or `REJECTED`. Always
+  check all three levels before treating a request as fully successful.
+</Tip>
+
+---
+
+## Error Reference
+
+### HTTP-Level Errors
+
+| HTTP Status | Error | Description |
+|---|---|---|
+| `400` | Invalid Request | The submitted request is malformed or missing required parameters. |
+| `401` | Authentication Error | Credentials are missing or incorrect. |
+| `403` | Authorization Error | Your account does not have access to this business, metric, or time range. |
+| `404` | Not Found | The requested resource does not exist. |
+| `500` | Internal Error | Something went wrong on Yelp's end. |
+| `503` | Service Unavailable | The API is temporarily unavailable. |
+
+### Business-Level Rejection Codes
+
+When `business_results[].status` is `"REJECTED"`, the `business_results[].error.code` field contains one of:
+
+| Code | Message |
+|---|---|
+| `BUSINESS_NOT_ACTIVE` | This business cannot be accessed because it is closed. |
+| `PROGRAM_NOT_ACTIVE_CLOSED_BUSINESS` | The program is no longer active because the business has been closed. |
+| `PROGRAM_NOT_ACTIVE_BUSINESS_REMOVED_FROM_SEARCH` | The program is no longer active because the business was removed from search (duplicate, eligibility, etc.). |
+| `PROGRAM_HAS_EXPIRED` | The program cannot be modified — the end date has passed or the business was removed from search. |
+
+### Program-Level Rejection Codes
+
+When `update_results.program_added.status` or `update_results.program_modified.status` is `"REJECTED"`:
+
+| Code | Message |
+|---|---|
+| `INVALID_OR_MISSING_KEY` | Invalid or missing required key(s). |
+| `PROGRAM_ALREADY_RUNNING_BY_ANOTHER_PROVIDER` | The client already purchased this product from another provider. |
+| `CANNOT_ADD_PROGRAM_IN_PAST` | Cannot add a program that starts in the past. |
+| `PROGRAM_ALREADY_REQUESTED` | You already requested to enable this product for this client. |
+| `CONFLICTS_WITH_ANOTHER_ACTIVE_PROGRAM` | This program conflicts with a currently active or recently ended program. Use a start date after any conflicting program's end date. |
+| `CANNOT_DECREASE_BUDGET_BELOW_AMOUNT_ALREADY_SPENT` | Campaign has already spent the requested amount. Cannot decrease budget below actual spend. |
+| `CURRENCY_MISMATCH` | Currency must remain consistent — it cannot be changed once a program is running. |
+| `BUSINESS_RESTRICTED_FROM_ADVERTISING` | Yelp has blocked this location from purchasing advertising. Contact [partner-support@yelp.com](mailto:partner-support@yelp.com). |
+| `INVALID_PRICE` | Invalid price — must be a numeric value formatted in cents. |
+| `UNSUPPORTED_CATEGORIES` | The business category is declined due to policy restrictions. |
+| `BID_TOO_HIGH_FOR_BUDGET` | Bid exceeds the total prorated budget. Increase the budget to improve ad delivery. |
+| `COULD_NOT_MODIFY_PROGRAM` | The specified program could not be modified. |
+| `NO_CATEGORIES` | The business has no categories or they are awaiting approval. |
+| `CAMPAIGN_BUDGET_VIOLATES_PROMO_RESTRICTIONS` | Campaign budget is outside the restrictions set by the associated promo code. |
+| `PARENT_WAS_REJECTED` | Another part of your request failed — check other attributes of the response for the root cause. |
+
+<Note>
+  For troubleshooting, performance questions, or optimization help, contact
+  [partner-support@yelp.com](mailto:partner-support@yelp.com). Partners should
+  handle escalations from their own customers directly.
+</Note>

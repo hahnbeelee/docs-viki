@@ -1,0 +1,238 @@
+---
+title: "GET /v3/businesses/{id} — Get Yelp Business Details"
+sidebarTitle: "Business Details"
+description: "Retrieve rich details for a single Yelp business including address, hours, photos, rating, price, categories, and plan-dependent attributes."
+---
+
+The Business Details endpoint returns comprehensive information about a single Yelp business — everything from its address and phone number to hours of operation, photos, rating, and rich attributes. You can look up a business by either its Yelp business ID or its human-readable alias. The depth of attribute data returned depends on your API plan tier.
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/businesses/{id}
+```
+
+## Authentication
+
+Include your API key as a Bearer token in the `Authorization` header of every request.
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The Yelp business ID or alias. You can use either format:
+  - **ID**: `"WavvLdfdP6g8aZTtbBQHTw"`
+  - **Alias**: `"north-india-restaurant-san-francisco"`
+
+  The alias is the slug found in a Yelp business URL.
+</ParamField>
+
+<Note>
+  When a business is merged or migrated to a new Yelp ID, the API returns a **301 redirect** to the canonical record. Make sure your HTTP client follows redirects, or handle 301 responses explicitly to update any stored IDs.
+</Note>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL (by alias)
+curl --request GET \
+  --url 'https://api.yelp.com/v3/businesses/north-india-restaurant-san-francisco' \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+```
+
+```bash cURL (by ID)
+curl --request GET \
+  --url 'https://api.yelp.com/v3/businesses/WavvLdfdP6g8aZTtbBQHTw' \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+```
+
+```python Python
+import requests
+
+business_id = "north-india-restaurant-san-francisco"
+url = f"https://api.yelp.com/v3/businesses/{business_id}"
+headers = {"Authorization": "Bearer YOUR_API_KEY"}
+
+response = requests.get(url, headers=headers)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const businessId = "north-india-restaurant-san-francisco";
+const response = await axios.get(
+  `https://api.yelp.com/v3/businesses/${businessId}`,
+  { headers: { Authorization: "Bearer YOUR_API_KEY" } }
+);
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "id": "north-india-restaurant-san-francisco",
+  "alias": "north-india-restaurant-san-francisco",
+  "name": "North India Restaurant",
+  "url": "https://www.yelp.com/biz/north-india-restaurant-san-francisco",
+  "phone": "+14157885000",
+  "display_phone": "(415) 788-5000",
+  "rating": 4.0,
+  "review_count": 551,
+  "price": "$$",
+  "is_claimed": true,
+  "is_closed": false,
+  "transactions": ["delivery"],
+  "categories": [
+    { "alias": "indpak", "title": "Indian" }
+  ],
+  "coordinates": {
+    "latitude": 37.787789124691,
+    "longitude": -122.399305736113
+  },
+  "location": {
+    "address1": "123 Second St",
+    "address2": "",
+    "address3": "",
+    "city": "San Francisco",
+    "state": "CA",
+    "zip_code": "94105",
+    "country": "US",
+    "display_address": ["123 Second St", "San Francisco, CA 94105"]
+  },
+  "photos": [
+    "https://s3-media4.fl.yelpcdn.com/bphoto/howYvOKNPXU9A5KUahEXLA/o.jpg",
+    "https://s3-media3.fl.yelpcdn.com/bphoto/I-CX8nioj3_ybAAYmhZcYg/o.jpg",
+    "https://s3-media2.fl.yelpcdn.com/bphoto/uaSNfzJUiFDzMeSCwTcs-A/o.jpg"
+  ],
+  "hours": [
+    {
+      "hours_type": "REGULAR",
+      "is_open_now": true,
+      "open": [
+        { "day": 0, "start": "1000", "end": "2300", "is_overnight": false },
+        { "day": 1, "start": "1000", "end": "2300", "is_overnight": false },
+        { "day": 4, "start": "1000", "end": "0000", "is_overnight": false },
+        { "day": 5, "start": "1000", "end": "0000", "is_overnight": false },
+        { "day": 6, "start": "1000", "end": "2300", "is_overnight": false }
+      ]
+    }
+  ]
+}
+```
+
+## Response Fields
+
+<ResponseField name="id" type="string">
+  Unique Yelp business identifier.
+</ResponseField>
+
+<ResponseField name="alias" type="string">
+  URL-safe slug for the business, usable as an alternative `id` in this endpoint.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Business display name.
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  URL of the Yelp business page.
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Phone number in E.164 format (e.g. `"+14157885000"`).
+</ResponseField>
+
+<ResponseField name="display_phone" type="string">
+  Phone number in a human-readable, localized format (e.g. `"(415) 788-5000"`).
+</ResponseField>
+
+<ResponseField name="rating" type="number">
+  Yelp rating from 1.0 to 5.0.
+</ResponseField>
+
+<ResponseField name="review_count" type="integer">
+  Total number of Yelp reviews.
+</ResponseField>
+
+<ResponseField name="price" type="string">
+  Price level: `"$"`, `"$$"`, `"$$$"`, or `"$$$$"`.
+</ResponseField>
+
+<ResponseField name="is_claimed" type="boolean">
+  Whether the business owner has claimed this Yelp listing.
+</ResponseField>
+
+<ResponseField name="is_closed" type="boolean">
+  Whether the business is permanently closed.
+</ResponseField>
+
+<ResponseField name="transactions" type="array">
+  Supported transaction types such as `"pickup"`, `"delivery"`, or `"restaurant_reservation"`.
+</ResponseField>
+
+<ResponseField name="categories" type="array">
+  List of business categories, each with an `alias` and `title`.
+</ResponseField>
+
+<ResponseField name="coordinates" type="object">
+  Geographic coordinates of the business.
+
+  <Expandable title="coordinates fields">
+    <ResponseField name="latitude" type="number">Latitude of the business location.</ResponseField>
+    <ResponseField name="longitude" type="number">Longitude of the business location.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="location" type="object">
+  Full address details for the business.
+
+  <Expandable title="location fields">
+    <ResponseField name="address1" type="string">Primary street address.</ResponseField>
+    <ResponseField name="address2" type="string">Secondary address line (suite, floor, etc.).</ResponseField>
+    <ResponseField name="address3" type="string">Tertiary address line.</ResponseField>
+    <ResponseField name="city" type="string">City name.</ResponseField>
+    <ResponseField name="state" type="string">State or province code.</ResponseField>
+    <ResponseField name="zip_code" type="string">Postal code.</ResponseField>
+    <ResponseField name="country" type="string">ISO 3166-1 alpha-2 country code (e.g. `"US"`).</ResponseField>
+    <ResponseField name="display_address" type="array">Formatted address as an array of strings, suitable for display.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="photos" type="array">
+  Array of up to 3 photo URLs for the business.
+</ResponseField>
+
+<ResponseField name="hours" type="array">
+  Business hours information.
+
+  <Expandable title="hours fields">
+    <ResponseField name="hours_type" type="string">Type of hours record. `"REGULAR"` for standard weekly hours.</ResponseField>
+    <ResponseField name="is_open_now" type="boolean">Whether the business is currently open.</ResponseField>
+    <ResponseField name="open" type="array">
+      Array of open-period objects, each with:
+      - `day` (integer, 0=Monday through 6=Sunday)
+      - `start` (string, 24-hour time as `"HHMM"`)
+      - `end` (string, 24-hour time as `"HHMM"`)
+      - `is_overnight` (boolean, `true` if the period crosses midnight)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="attributes" type="object">
+  Extended business attributes such as `WiFi`, `Alcohol`, `GoodForKids`, `RestaurantsReservations`, and many more. The number of attributes returned depends on your plan tier.
+</ResponseField>
+
+<Note>
+  The number of business attributes returned varies by plan:
+  - **Premium**: up to 66 attributes
+  - **Enhanced**: up to 23 attributes
+  - **Base**: up to 15 attributes
+</Note>

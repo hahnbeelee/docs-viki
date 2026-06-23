@@ -1,20 +1,71 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "Yelp Developer Documentation"
+sidebarTitle: "Home"
+description: "Build powerful local experiences with Yelp's APIs. Access millions of businesses, reviews, AI-powered search, and partner integrations."
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+Welcome to the Yelp Developer Platform. Whether you're building a local search experience, integrating conversational AI, managing business listings, or running advertising programs, Yelp's APIs give you access to the richest local business data on the web.
 
-<Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
-</Tip>
+<CardGroup cols={2}>
+  <Card title="Get Started" icon="rocket" href="/docs/getting-started">
+    Create your app and make your first API call in minutes
+  </Card>
+  <Card title="Places API" icon="magnifying-glass" href="/docs/places/overview">
+    Search and discover millions of businesses worldwide
+  </Card>
+  <Card title="AI API" icon="robot" href="/docs/ai/overview">
+    Conversational business discovery powered by Yelp's data
+  </Card>
+  <Card title="API Reference" icon="code" href="/reference/business-search">
+    Explore full endpoint documentation and schemas
+  </Card>
+</CardGroup>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+## What Can You Build?
+
+Yelp APIs are split into two main categories:
+
+- **Yelp Places API** — Publicly accessible via self-serve. Search businesses, read reviews, browse events, and query rich business data. Available to all developers.
+- **Yelp Partner APIs** — Advanced APIs for advertising, leads, reporting, listing management, and more. Requires a Yelp Partner agreement.
+
+<CardGroup cols={3}>
+  <Card title="Local Search" icon="location-dot" href="/docs/places/business-search">
+    Search businesses by keyword, location, category, and price
+  </Card>
+  <Card title="AI Chat" icon="comments" href="/docs/ai/quickstart">
+    Natural-language business Q&A and recommendations
+  </Card>
+  <Card title="Reservations" icon="calendar-check" href="/docs/platform/reservations">
+    Native booking flows for restaurants and services
+  </Card>
+  <Card title="Leads" icon="envelope" href="/docs/partner/leads-api">
+    Receive and respond to Request-a-Quote messages
+  </Card>
+  <Card title="Advertising" icon="bullhorn" href="/docs/partner/ads-api">
+    Manage CPC, branded profiles, and ad programs
+  </Card>
+  <Card title="Reporting" icon="chart-bar" href="/docs/partner/reporting-api">
+    Business metrics and advertiser performance data
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+<Steps>
+  <Step title="Create a Yelp App">
+    Visit [business.yelp.com/data/products/places-api](https://business.yelp.com/data/products/places-api/) to choose a plan and create your app. You'll receive an API key automatically.
+  </Step>
+  <Step title="Authenticate Your Requests">
+    Pass your API key in the `Authorization` header as `Bearer YOUR_API_KEY` on every request.
+  </Step>
+  <Step title="Make Your First Call">
+    Search for businesses near a location using the Business Search endpoint at `https://api.yelp.com/v3/businesses/search`.
+  </Step>
+  <Step title="Explore the Docs">
+    Browse the guides for the Places API, AI API, or Partner APIs depending on your use case.
+  </Step>
+</Steps>
+
+<Note>
+  Partner APIs require a separate agreement with Yelp. If you're unsure which APIs you have access to, contact your Yelp business development or partnership team.
+</Note>

@@ -1,0 +1,205 @@
+---
+title: "What the Yelp AI API Can and Cannot Do"
+sidebarTitle: "Capabilities"
+description: "A complete reference of supported query types — business search, Q&A, comparisons, and reservations — plus current limitations to plan around."
+---
+
+The Yelp AI API is purpose-built for local business discovery conversations. It excels at anything from finding a restaurant that meets specific criteria to booking a table — all through natural language. This page documents exactly what the API supports today, what's not yet available, and how each capability maps to the `types` field in the response so you can handle results correctly in your application.
+
+## Supported Capabilities
+
+<Accordion title="1. Business Search with Contextual Summaries">
+The API can search for and recommend businesses based on user context such as location, category, and preferences. Results include AI-generated summaries, ratings, photos, and review snippets tailored to the query.
+
+**Example query:**
+> "Popular Mexican restaurants in Orange County, LA that are reasonably priced"
+
+**Example request:**
+```json
+POST https://api.yelp.com/ai/chat/v2
+Authorization: Bearer <Your API Key>
+Content-Type: application/json
+
+{
+  "query": "Popular Mexican restaurants in Orange County, LA that are reasonably priced",
+  "user_context": {
+    "locale": "en_US",
+    "latitude": 33.7175,
+    "longitude": -117.8311
+  }
+}
+```
+
+**Response `types` value:** `"business_search"`
+
+The response includes a curated `response.text` narrative alongside a full `entities[].businesses[]` array with address, rating, price, photos, and short/medium/long AI summaries for each business.
+</Accordion>
+
+<Accordion title="2. Business Questions & Answers">
+After a search, you can ask follow-up questions about the businesses in the current session. The API maintains context through the `chat_id` so you don't need to repeat yourself.
+
+**Example query (after a prior search):**
+> "What are the popular dishes at the above restaurants?"
+
+**Example request:**
+```json
+{
+  "query": "What are the popular dishes at the above restaurants?",
+  "chat_id": "vju58zis0pot_E3snwGtPQ"
+}
+```
+
+**Response `types` value:** `"business_question"`
+
+The response populates `contextual_info` fields — including `business_hours`, `review_snippets`, and `summary` — for each relevant business based on the question asked.
+</Accordion>
+
+<Accordion title="3. Business One-Shot Questions & Answers">
+You can ask direct questions about a specific business by name without needing a prior search in the same session. The API identifies the business and answers in a single round trip.
+
+**Example query:**
+> "Does Capital Grille in Costa Mesa, CA offer vegan options?"
+
+**Example request:**
+```json
+{
+  "query": "Does Capital Grille in Costa Mesa, CA offer vegan options?",
+  "user_context": {
+    "locale": "en_US",
+    "latitude": 33.6595,
+    "longitude": -117.9988
+  }
+}
+```
+
+**Response `types` value:** `"business_question"`
+
+This is useful for single-intent lookups where the user knows exactly which business they're asking about.
+</Accordion>
+
+<Accordion title="4. Business Comparisons">
+The API can compare specific menu items, amenities, or attributes across businesses in the current conversation context, drawing on review snippets and business data to provide a grounded comparison.
+
+**Example query:**
+> "Compare Red King and Original King ramen dishes at Ramen Nagi in Palo Alto"
+
+**Example request:**
+```json
+{
+  "query": "Compare Red King and Original King ramen dishes at Ramen Nagi in Palo Alto",
+  "chat_id": "EkZFEgibp0arnaDniyyrKA"
+}
+```
+
+**Response `types` value:** `"business_question"`
+
+The `contextual_info.review_snippets[]` array in the response contains customer reviews that specifically mention the items being compared, giving you grounded, citation-backed content to display.
+</Accordion>
+
+<Accordion title="5. AI-Assisted Restaurant Reservations">
+The API can process natural language reservation requests and return available booking slots for restaurants that manage reservations through Yelp Guest Manager. This covers thousands of restaurants across the US and Canada.
+
+**Example query:**
+> "I'd like a reservation for four at Chubby Cattle in Chicago this Friday at 8pm"
+
+**Example request:**
+```json
+{
+  "query": "I'd like a reservation for four at Chubby Cattle in Chicago this Friday at 8pm",
+  "user_context": {
+    "locale": "en_US",
+    "latitude": 41.8781,
+    "longitude": -87.6298
+  }
+}
+```
+
+**Response `types` value:** `"reservation"`
+
+**Response example:**
+```json
+{
+  "response": {
+    "text": "Tuscany Steakhouse has tables for two available on Saturday, June 28, 2025, throughout the evening. You can book as early as 6:00 PM or as late as 10:15 PM. Let me know your preferred time, and I can help you reserve a table.",
+    "tags": [
+      {
+        "tag_type": "business",
+        "start": 0,
+        "end": 18,
+        "meta": { "business_id": "4WDHrSodF1Xidv9ezS6Sgg" }
+      }
+    ]
+  },
+  "types": ["reservation"],
+  "entities": [
+    {
+      "businesses": [
+        {
+          "id": "4WDHrSodF1Xidv9ezS6Sgg",
+          "name": "Tuscany Steakhouse",
+          "attributes": {
+            "RestaurantsReservations": true
+          }
+        }
+      ]
+    }
+  ],
+  "chat_id": "usJAlEt4uY_eWEcND3lodw"
+}
+```
+
+Two business attributes are particularly relevant for reservation responses:
+
+| Field | Description |
+|---|---|
+| `attributes.RestaurantsReservations` | `true` if the restaurant accepts reservations |
+| `attributes.reservation_availability` | Live reservation slots from Yelp Guest Manager |
+| `attributes.accepts_reservations_through_yelp` | `true` if the restaurant can be booked directly through Yelp |
+</Accordion>
+
+## Response `types` Reference
+
+The `types` array in every response tells you how to handle the data:
+
+<Tabs>
+  <Tab title="business_search">
+    A location-based search was performed. The `entities[].businesses[]` array contains businesses matching the query, with full profiles including photos and summaries. `contextual_info.summary` may contain a query-specific AI summary.
+  </Tab>
+  <Tab title="business_question">
+    The response answers a question about one or more known businesses. `contextual_info.business_hours`, `contextual_info.review_snippets`, and `contextual_info.summary` are populated based on what was asked.
+  </Tab>
+  <Tab title="reservation">
+    The response relates to a restaurant reservation request. Look for `attributes.RestaurantsReservations` and `attributes.accepts_reservations_through_yelp` in the business entities to determine booking eligibility.
+  </Tab>
+</Tabs>
+
+## Not Yet Supported
+
+The following capabilities are not currently available in the Yelp AI API. Plan your user experience to redirect these request types gracefully:
+
+<Warning>
+  Sending unsupported query types will not cause an error — the API will attempt to respond, but results may be empty or off-topic. It's best to detect and filter these intent types in your application layer.
+</Warning>
+
+| Unsupported Request | Notes |
+|---|---|
+| Updating or canceling restaurant reservations | Not supported; direct users to the restaurant or Yelp directly |
+| Signing up for waitlists | Not supported in the current API |
+| Requesting quotes from service professionals | Use the Yelp Places API Request a Quote feature instead |
+| Turn-by-turn directions | Not available; use a mapping API for navigation |
+| Non-business queries (e.g., health advice, financial advice) | The API is scoped to local business discovery only |
+
+<Note>
+  Yelp is continually expanding the feature set. Check the [Changelog](https://docs.developer.yelp.com/changelog) for updates on new capabilities as they are released.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/docs/ai/quickstart">
+    See working code examples for the most common query types.
+  </Card>
+  <Card title="API Reference" icon="code" href="/reference/ai-chat">
+    Complete parameter and response field documentation for the AI chat endpoint.
+  </Card>
+</CardGroup>

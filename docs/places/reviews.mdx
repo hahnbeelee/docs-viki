@@ -1,0 +1,190 @@
+---
+title: "Get Business Reviews from the Yelp Places API"
+sidebarTitle: "Reviews"
+description: "Retrieve review excerpts and highlights for any Yelp business. Display real user feedback, ratings, and reviewer profiles in your app."
+---
+
+The Yelp Places API lets you surface authentic user reviews directly in your application. You can fetch up to three review excerpts per business on Base and Enhanced plans, or up to seven excerpts on the Premium plan. Review highlights are also available on Premium to showcase the most useful feedback. All reviews include a star rating, a short excerpt, a link to the full review on Yelp, and a reviewer profile.
+
+<Note>
+  The API returns **excerpts only** — approximately 160 characters per review. Full review text is not available through the API. To read a complete review, direct users to the `url` field returned with each review object.
+</Note>
+
+---
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v3/businesses/{id}/reviews` | Returns up to 3 (or 7 on Premium) review excerpts for a business. |
+| `GET` | `/v3/businesses/{id}/review_highlights` | Returns curated review highlights. **Premium plan only.** |
+
+---
+
+## GET /v3/businesses/{id}/reviews
+
+Retrieve review excerpts for any business by its Yelp business ID or alias. The response includes the reviewer's name, profile photo URL, rating, excerpt text, and a deep link to the full review.
+
+<Note>
+  **Sort order is not configurable.** Yelp determines the order of returned reviews based on a combination of recency, user voting, and review quality.
+</Note>
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  The Yelp business ID or URL-friendly alias for the business (e.g., `north-india-restaurant-san-francisco`).
+</ParamField>
+
+<ParamField query="locale" type="string">
+  The locale for the response. Defaults to `en_US`. Use a supported locale code (e.g., `fr_FR`, `de_DE`) to receive translated content where available. See the [supported locales list](https://docs.developer.yelp.com/docs/resources-supported-locales) for all valid values.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/businesses/north-india-restaurant-san-francisco/reviews" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+With locale:
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/businesses/north-india-restaurant-san-francisco/reviews?locale=en_US" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Example Response
+
+```json
+{
+  "reviews": [
+    {
+      "id": "AeVAkQgueu6JtYtU4r3Jrg",
+      "url": "https://www.yelp.com/biz/north-india-restaurant-san-francisco?hrid=AeVAkQgueu6JtYtU4r3Jrg",
+      "text": "This place is really pretty and I really love this place. My friends and me came here yesterday. The food is superb, the service is impeccable (mostly) and...",
+      "rating": 5,
+      "time_created": "2024-01-15 18:22:03",
+      "user": {
+        "name": "Hoang V.",
+        "image_url": "https://s3-media1.fl.yelpcdn.com/photo/bQRonQWaxInb7eKAtMjf3A/o.jpg"
+      }
+    },
+    {
+      "id": "6tsz9tl7HAiOcYj_fGrsCg",
+      "url": "https://www.yelp.com/biz/north-india-restaurant-san-francisco?hrid=6tsz9tl7HAiOcYj_fGrsCg",
+      "text": "Went there for the first time Saturday evening — everything is great, the ambiance is outstanding for this location, tried the mulligatawny soup for starters...",
+      "rating": 5,
+      "time_created": "2024-01-10 20:45:11",
+      "user": {
+        "name": "Winston P.",
+        "image_url": "https://s3-media2.fl.yelpcdn.com/photo/O1ZuPKBhwxHAT60XZksWHQ/o.jpg"
+      }
+    },
+    {
+      "id": "3b3-zDKfomV-1qR3Z0jmQw",
+      "url": "https://www.yelp.com/biz/north-india-restaurant-san-francisco?hrid=3b3-zDKfomV-1qR3Z0jmQw",
+      "text": "I came in here for the $9.95 lunch buffet the day after it opened. It is the old Tara space and I like how it has been opened up to accommodate many more...",
+      "rating": 4,
+      "time_created": "2023-12-28 12:10:47",
+      "user": {
+        "name": "Ronita J.",
+        "image_url": "https://s3-media1.fl.yelpcdn.com/photo/bQRonQWaxInb7eKAtMjf3A/o.jpg"
+      }
+    }
+  ],
+  "total": 3,
+  "possible_languages": ["en"]
+}
+```
+
+### Response Fields
+
+<ResponseField name="reviews" type="array">
+  Array of review objects returned for the business.
+
+  <Expandable title="Review object fields">
+    <ResponseField name="id" type="string">
+      Unique identifier for the review.
+    </ResponseField>
+    <ResponseField name="text" type="string">
+      Excerpt of the review text, approximately 160 characters. This is **not** the full review. Use `url` to link users to the complete review on Yelp.
+    </ResponseField>
+    <ResponseField name="rating" type="integer">
+      The star rating given by the reviewer. Value is between `1` and `5`.
+    </ResponseField>
+    <ResponseField name="time_created" type="string">
+      Timestamp indicating when the review was created, in `YYYY-MM-DD HH:MM:SS` format.
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      Direct URL to the full review on Yelp. Link your users here to read the complete text.
+    </ResponseField>
+    <ResponseField name="user" type="object">
+      Profile information for the reviewer.
+
+      <Expandable title="User object fields">
+        <ResponseField name="name" type="string">
+          Display name of the reviewer (e.g., `"Hoang V."`).
+        </ResponseField>
+        <ResponseField name="image_url" type="string">
+          URL of the reviewer's Yelp profile photo. May be an empty string if no photo is set.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="total" type="integer">
+  The total number of reviews returned in this response (not the total number of reviews for the business).
+</ResponseField>
+
+<ResponseField name="possible_languages" type="array">
+  List of language codes found in the returned review excerpts (e.g., `["en"]`).
+</ResponseField>
+
+---
+
+## GET /v3/businesses/{id}/review_highlights
+
+<Warning>
+  This endpoint requires the **Premium plan**. Calls made without a Premium API key will return an authorization error.
+</Warning>
+
+Review highlights surface the most useful and representative feedback for a business, curated from the full pool of Yelp reviews. They are ideal for showcasing what customers say most frequently about a location.
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  The Yelp business ID or URL-friendly alias for the business.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET \
+  "https://api.yelp.com/v3/businesses/north-india-restaurant-san-francisco/review_highlights" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+---
+
+## Plan Comparison
+
+Understand which plan gives you access to each reviews feature:
+
+<CardGroup cols={3}>
+  <Card title="Base & Enhanced Plans" icon="star">
+    Up to **3 review excerpts** per business via `/reviews`. Review highlights endpoint is not available.
+  </Card>
+  <Card title="Premium Plan" icon="stars">
+    Up to **7 review excerpts** per business via `/reviews`, plus access to the `/review_highlights` endpoint.
+  </Card>
+  <Card title="All Plans" icon="link">
+    Every review includes a `url` deep link so users can read the full review text on Yelp.
+  </Card>
+</CardGroup>
+
+<Tip>
+  Upgrade to the Premium plan for deeper review coverage. Visit the [Yelp Data Licensing page](https://business.yelp.com/data/products/fusion/) to compare plans and start a free trial.
+</Tip>

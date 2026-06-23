@@ -1,0 +1,335 @@
+---
+title: "Build an AI Agent with Yelp AI API and LangChain"
+sidebarTitle: "Agentic Integration"
+description: "Wrap the Yelp AI API in a LangChain tool and wire it into a GPT-4o agent that handles multi-turn local business discovery conversations."
+---
+
+Modern AI applications often go beyond simple request-response flows — they need agents that can reason over multiple steps, maintain conversation context, and call external tools on demand. This guide shows you how to wrap the Yelp AI API in a LangChain tool and connect it to an OpenAI GPT-4o agent, giving you a foundation for building sophisticated conversational experiences powered by Yelp's local business data.
+
+## Prerequisites
+
+Before you start, make sure you have:
+
+- A **Yelp Places API key** (Premium plan required for AI API access). Get one at the [Yelp Developer Portal](https://business.yelp.com/data/products/fusion).
+- An **OpenAI API key** with access to GPT-4o.
+- Python 3.9+ with the following packages installed:
+
+```bash
+pip install langchain langchain_openai requests pydantic
+```
+
+Set your API keys as environment variables:
+
+```python
+import os
+
+YELP_API_KEY = "your_yelp_api_key_here"
+os.environ["OPENAI_API_KEY"] = "your_openai_api_key"
+```
+
+<Steps>
+
+### Define the Yelp AI API tool
+
+Use LangChain's `@tool` decorator with a Pydantic input schema to define a strongly-typed tool the agent can call. The tool wraps the `POST https://api.yelp.com/ai/chat/v2` endpoint.
+
+```python
+import requests
+from langchain_core.tools import tool
+from pydantic import BaseModel, Field
+
+
+class YelpQueryInput(BaseModel):
+    query: str = Field(description="The user's query for local business information")
+    chat_id: str | None = Field(
+        description="Unique chat ID for maintaining conversation history",
+        default=None
+    )
+
+
+@tool(args_schema=YelpQueryInput)
+def yelp_ai_api(query: str, chat_id: str) -> dict:
+    """
+    Calls Yelp AI API to get local business information and comparisons
+    from a natural language query.
+
+    Args:
+    - query: The user's query for local business information.
+    - chat_id: Unique chat ID for maintaining conversation history.
+
+    Returns:
+    - dict: JSON response from the Yelp AI API or an error message.
+    """
+    url = "https://api.yelp.com/ai/chat/v2"
+    headers = {
+        "Authorization": f"Bearer {YELP_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "query": query,
+        "chat_id": chat_id
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        return {"error": f"API request failed: {str(e)}"}
+```
+
+<Note>
+  The `chat_id` field defaults to `None`. The agent will pass `None` on the first turn and the Yelp API will return a `chat_id` in the response. In the multi-turn section below, you'll see how to store and reuse that value.
+</Note>
+
+### Create the LLM agent
+
+Initialize a `ChatOpenAI` model with `gpt-4o`, define a system prompt, and wire everything together with `create_tool_calling_agent` and `AgentExecutor`.
+
+```python
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+
+# Initialize OpenAI model
+llm = ChatOpenAI(model="gpt-4o")
+
+# Define a system prompt for the agent
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "You are a helpful assistant"),
+        ("human", "{input}"),
+        # Placeholder fills a list of messages for the agent scratchpad
+        ("placeholder", "{agent_scratchpad}"),
+    ]
+)
+
+# Initialize the agent
+agent = create_tool_calling_agent(llm, tools=[yelp_ai_api], prompt=prompt)
+
+# Initialize AgentExecutor
+agent_executor = AgentExecutor(agent=agent, tools=[yelp_ai_api], verbose=True)
+```
+
+Learn more about `AgentExecutor` in the [LangChain documentation](https://python.langchain.com/api_reference/langchain/agents/langchain.agents.agent.AgentExecutor.html).
+
+### Invoke the agent
+
+Call `agent_executor.invoke()` with the user's query. For the first message in a session, pass `chat_id` as `None`.
+
+```python
+input_data = {
+    "query": "Find the best pizza places in SF",
+    "chat_id": None  # None for first message
+}
+
+# Run the agent
+response = agent_executor.invoke({"input": input_data})
+print(response)
+```
+
+The agent calls the Yelp AI API tool and formats the structured response into a natural language answer:
+
+```json
+{
+  "input": {
+    "query": "Find the best pizza places in SF",
+    "chat_id": null
+  },
+  "output": "Here are some of the best pizza places in San Francisco according to Yelp:\n\n1. **Tony's Pizza Napoletana**\n   - Address: 1570 Stockton St, San Francisco, CA 94133\n   - Rating: 4.2 (7813 reviews)\n   - Price: $$\n   - Known for its award-winning pizzas and wide variety of pizza styles, including Neapolitan, Detroit, St. Louis, and New York. Features a full bar and is located in a vibrant neighborhood.\n\n2. **Golden Boy Pizza**\n   - Address: 542 Green St, San Francisco, CA 94133\n   - Rating: 4.3 (4616 reviews)\n   - Price: $\n   - Famous for its Sicilian-style squares with a thick, focaccia-like crust. Recommended for its clam and garlic pizza and casual atmosphere.\n\n3. **That's Amore Woodfire Pizza**\n   - Address: 1901 Ocean Ave, San Francisco, CA 94127\n   - Rating: 4.5 (270 reviews)\n   - Price: $$\n   - Known for authentic wood-fired pizzas made with fresh ingredients. Features a Stefano Ferrera oven from Naples, Italy."
+}
+```
+
+### Handle multi-turn conversations
+
+To continue the conversation across turns, extract the `chat_id` from the Yelp API response and pass it back in subsequent calls. The Yelp API uses this identifier to maintain the full conversation context — so the follow-up "What are their opening hours?" knows which businesses were discussed in the previous turn.
+
+First, capture the `chat_id` from the raw Yelp API response. Here's an example of what that response looks like:
+
+```json
+{
+  "response": {
+    "text": "Here are some places in San Francisco offering the best pizza..."
+  },
+  "types": ["business_search"],
+  "entities": [
+    {
+      "businesses": [
+        {
+          "id": "mSMZJj2pFvttWLpcDmgrEA",
+          "name": "Tony's Pizza Napoletana",
+          "summaries": {
+            "short": "Bustling pizzeria with award-winning pizzas and outdoor seating in North Beach."
+          }
+        }
+      ]
+    }
+  ],
+  "chat_id": "N1u996U6HInvhrCaedrb1Q"
+}
+```
+
+Then pass the `chat_id` in the follow-up invocation:
+
+```python
+# Store chat_id from the previous Yelp API response
+chat_id = "N1u996U6HInvhrCaedrb1Q"
+
+query = "What are their opening hours?"
+
+input_data = {
+    "query": query,
+    "chat_id": chat_id
+}
+
+response = agent_executor.invoke({"input": input_data})
+print(response)
+```
+
+The agent returns hours for all three businesses:
+
+```json
+{
+  "input": {
+    "query": "What are their opening hours?",
+    "chat_id": "N1u996U6HInvhrCaedrb1Q"
+  },
+  "output": "Here are the opening hours for the businesses mentioned:\n\n1. **Tony's Pizza Napoletana**\n   - Monday & Tuesday: 12:00 PM - 9:30 PM\n   - Wednesday & Thursday: 12:00 PM - 10:00 PM\n   - Friday & Saturday: 12:00 PM - 11:00 PM\n   - Sunday: 12:00 PM - 10:30 PM\n\n2. **Golden Boy Pizza**\n   - Monday to Thursday: 11:30 AM - 9:00 PM\n   - Friday & Saturday: 11:30 AM - 11:00 PM\n   - Sunday: 11:30 AM - 9:00 PM\n\n3. **That's Amore Woodfire Pizza**\n   - Open every day from 11:00 AM - 9:45 PM"
+}
+```
+
+### Add location context
+
+To return businesses near a specific location, extend the Pydantic schema with a `UserContext` model and pass latitude/longitude in the API call. This enables truly personalized "near me" searches.
+
+```python
+import requests
+from langchain_core.tools import tool
+from pydantic import BaseModel, Field
+
+
+class UserContext(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class YelpQueryInput(BaseModel):
+    query: str = Field(description="The user's query for local business information")
+    chat_id: str | None = Field(
+        description="Unique chat ID for maintaining conversation history",
+        default=None
+    )
+    user_context: UserContext = Field(
+        description="Contains user's latitude and longitude for location-based search"
+    )
+
+
+@tool(args_schema=YelpQueryInput)
+def yelp_ai_api(query: str, chat_id: str, user_context: UserContext) -> dict:
+    """
+    Calls Yelp AI API to get local business information and comparisons
+    from a natural language query.
+
+    Parameters:
+    - query: The user's query for local business information.
+    - chat_id: Unique chat ID for maintaining conversation history.
+    - user_context: Contains user's latitude and longitude for location-based search.
+
+    Returns:
+    - dict: JSON response from the Yelp AI API or an error message.
+    """
+    url = "https://api.yelp.com/ai/chat/v2"
+    headers = {
+        "Authorization": f"Bearer {YELP_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "query": query,
+        "user_context": {
+            "latitude": user_context.latitude if user_context else None,
+            "longitude": user_context.longitude if user_context else None
+        },
+        "chat_id": chat_id
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        return {"error": f"API request failed: {str(e)}"}
+```
+
+Then invoke the agent with location data:
+
+```python
+input_data = {
+    "query": "Find the best pizza places near me",
+    "user_context": {
+        "latitude": 37.7749,
+        "longitude": -122.4194
+    },
+    "chat_id": None  # None for first message
+}
+
+response = agent_executor.invoke({"input": input_data})
+print(response)
+```
+
+The agent uses the coordinates to surface geographically relevant results:
+
+```json
+{
+  "input": {
+    "query": "Find the best pizza places near me",
+    "user_context": { "latitude": 37.7749, "longitude": -122.4194 },
+    "chat_id": null
+  },
+  "output": "Here are some of the best pizza places near you in San Francisco:\n\n1. **Tony's Pizza Napoletana** — Rating: 4.2, 7813 reviews, $$\n   1570 Stockton St, San Francisco, CA 94133\n   Renowned pizzeria in North Beach with award-winning pizzas.\n\n2. **Outta Sight Pizza** — Rating: 4.6, 317 reviews, $\n   422 Larkin St, San Francisco, CA 94102\n   Cozy urban pizzeria known for New York-style slices and unique toppings.\n\n3. **Golden Boy Pizza** — Rating: 4.3, 4616 reviews, $\n   542 Green St, San Francisco, CA 94133\n   Famous for Sicilian-style pizza with a thick, focaccia-like crust."
+}
+```
+
+</Steps>
+
+## Sample Multi-Turn Conversation
+
+Here's a complete example of the conversational flow your agent can support:
+
+<Tabs>
+  <Tab title="Turn 1: Discovery">
+    **User:** "Find the best pizza places in SF"
+
+    **Agent:** Returns Tony's Pizza Napoletana, Golden Boy Pizza, and That's Amore Woodfire Pizza with addresses, ratings, and descriptions. Internally stores `chat_id: "N1u996U6HInvhrCaedrb1Q"`.
+  </Tab>
+  <Tab title="Turn 2: Follow-up">
+    **User:** "What are their opening hours?"
+
+    **Agent:** Passes `chat_id: "N1u996U6HInvhrCaedrb1Q"` to the Yelp AI API. Returns the full weekly schedule for all three businesses referenced in Turn 1.
+  </Tab>
+  <Tab title="Turn 3: Deeper Q&A">
+    **User:** "Which one has outdoor seating and accepts Apple Pay?"
+
+    **Agent:** Passes the same `chat_id`. The Yelp AI API queries `attributes` for the existing businesses and returns a targeted answer.
+  </Tab>
+</Tabs>
+
+<Tip>
+  Your agent's LLM (GPT-4o) handles the natural language reasoning and formatting, while the Yelp AI API handles business data retrieval and conversation context. Keep the two responsibilities separate — don't ask GPT-4o to invent business facts; always let it call the Yelp tool for business information.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="AI API Reference" icon="code" href="/reference/ai-chat">
+    Full parameter and response field documentation for the `POST /ai/chat/v2` endpoint.
+  </Card>
+  <Card title="Capabilities" icon="list-check" href="/docs/ai/capabilities">
+    See the full list of supported query types, including reservations and business comparisons.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/docs/ai/quickstart">
+    A simpler introduction to the Yelp AI API without the agent layer.
+  </Card>
+  <Card title="Overview" icon="book-open" href="/docs/ai/overview">
+    Key concepts, authentication, and request/response field reference.
+  </Card>
+</CardGroup>

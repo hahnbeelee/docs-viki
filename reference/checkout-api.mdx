@@ -1,0 +1,196 @@
+---
+title: "Checkout API Reference — Yelp Order Management"
+sidebarTitle: "Checkout"
+description: "Receive, update, and cancel Yelp platform orders for food delivery, bookings, reservations, and more. Covers the notification payload format and order status lifecycle."
+---
+
+The Yelp Checkout API lets you manage orders that users initiate on the Yelp website or app and fulfil through your platform. The integration is event-driven: Yelp POSTs `OrderStatusChangeNotification` payloads to your `notification_url` whenever an order status changes, and you update or cancel orders by calling back into Yelp's API. Orders support multiple service types — food delivery, bookings, hotel reservations, restaurant reservations, goods, and medical appointments.
+
+<Warning>
+  **Partner API — Access disabled by default.** The Checkout API requires a partner agreement with Yelp. **Authentication uses HTTP Basic Auth** (username:password) over HTTPS. Credentials are assigned to you separately from your standard Yelp API Key.
+</Warning>
+
+<Note>
+  Your `notification_url` must be HTTPS and must respond with HTTP `200` within **10 seconds** for every notification. Yelp guarantees at-least-once delivery with up to 3 retries (5-second timeout each). Design your order-handling logic to be idempotent.
+</Note>
+
+---
+
+## Overview: The Order Lifecycle
+
+Orders flow through the following states:
+
+| Status Code | Description |
+|-------------|-------------|
+| `pending_user_submit` | User is entering billing/required information and has not confirmed yet. |
+| `charge_pending` | Yelp is processing the user's payment. |
+| `ready_for_fulfillment` | Order is confirmed. Your platform should begin fulfillment. |
+| `cancelled` | Order was cancelled by your platform. |
+| `cancelled_by_user` | Order was cancelled by the user. |
+| `cancelled_by_yelp` | Order was cancelled by Yelp (e.g., inactivity, security). |
+
+---
+
+## Receiving Order Notifications
+
+You specify a `notification_url` during order creation. Yelp sends a POST request with an `OrderStatusChangeNotification` payload to this URL on every status change.
+
+### Notification Events
+
+| User/Partner Action | Notification Sent |
+|--------------------|------------------|
+| User submits order on Yelp | `order_status: ready_for_fulfillment` |
+| You call `/update` | `order_status: ready_for_fulfillment` |
+| You call `/cancel` | `order_status: cancelled` |
+| User cancels on Yelp | `order_status: cancelled_by_user` |
+
+### Example OrderStatusChangeNotification Payload
+
+```json
+{
+  "notification_id": "a1b2c3d4e5f6789012345678901234ab",
+  "yelp_order_id": "9f8e7d6c5b4a321098765432109876fe",
+  "time_created": "2024-08-15T19:30:00+00:00",
+  "order_status": "ready_for_fulfillment",
+  "billing_type": "yelp",
+  "user_info": {
+    "first_name": "Alex",
+    "last_name": "Johnson",
+    "email": "alex.johnson@example.com",
+    "phone": "+14155551234",
+    "availability_constraints": [
+      {
+        "object": "CustomerAddressConstraint",
+        "customer_address_str": "123 Main St, San Francisco, CA",
+        "customer_address": {
+          "object": "Address",
+          "address1": "123 Main St",
+          "address2": "",
+          "city": "San Francisco",
+          "region": "CA",
+          "postal_code": "94105",
+          "country": "US"
+        }
+      }
+    ]
+  },
+  "transaction_status_change": {
+    "operation_type": "charge",
+    "amount": {
+      "amount": "25.500",
+      "currency_code": "USD"
+    },
+    "time_updated": "2024-08-15T19:30:00+00:00",
+    "operation_status": "success"
+  },
+  "coupon": null
+}
+```
+
+### OrderStatusChangeNotification Fields
+
+<ResponseField name="notification_id" type="string">
+  Unique UUID for this notification. Use this to deduplicate repeated deliveries.
+</ResponseField>
+
+<ResponseField name="yelp_order_id" type="string">
+  Unique UUID identifying the order.
+</ResponseField>
+
+<ResponseField name="order_request_id" type="string">
+  Present only for notifications corresponding to your `/update` or `/cancel` API calls.
+</ResponseField>
+
+<ResponseField name="time_created" type="string">
+  ISO 8601 UTC timestamp when this notification was created.
+</ResponseField>
+
+<ResponseField name="order_status" type="string">
+  The most current order status at the time of this notification (see status table above).
+</ResponseField>
+
+<ResponseField name="billing_type" type="string">
+  `partner` — your platform collects payment from the customer. `yelp` — Yelp collects payment via credit card.
+</ResponseField>
+
+<ResponseField name="user_info" type="object">
+  Present only for `charge` operation notifications. Contains the user's fulfillment details.
+  <Expandable title="FulfillmentUserInfo fields">
+    <ResponseField name="first_name" type="string">User's first name.</ResponseField>
+    <ResponseField name="last_name" type="string">User's last name.</ResponseField>
+    <ResponseField name="email" type="string">User's email address.</ResponseField>
+    <ResponseField name="phone" type="string">User's phone number.</ResponseField>
+    <ResponseField name="availability_constraints" type="array">
+      Optional constraints entered by the user (e.g., delivery address).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="transaction_status_change" type="object">
+  Billing operation details.
+  <Expandable title="TransactionStatusChange fields">
+    <ResponseField name="operation_type" type="string">`charge`, `update`, or `cancel`.</ResponseField>
+    <ResponseField name="amount" type="object">Currency amount with `amount` (decimal string) and `currency_code` (ISO 4217).</ResponseField>
+    <ResponseField name="time_updated" type="string">Timestamp when the operation occurred.</ResponseField>
+    <ResponseField name="operation_status" type="string">`success`, `failed`, or `pending`.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="coupon" type="object">
+  If a Yelp coupon was applied, contains `code` (string) and `discount` (Currency object). Otherwise `null`.
+</ResponseField>
+
+---
+
+## Service Types
+
+<ResponseField name="ServiceType" type="enum">
+  The type of service for an order.
+
+  | Value | Description |
+  |-------|-------------|
+  | `food` | Food delivery or takeout orders. |
+  | `booking` | Appointment or future-service reservations (e.g., spa, plumber). |
+  | `hotel_reservation` | Hotel room reservations. |
+  | `restaurant_reservation` | Restaurant table reservations. |
+  | `goods` | Physical non-food item orders. |
+  | `medical_compliant` | Medical appointment reservations (e.g., dentist, doctor). |
+</ResponseField>
+
+---
+
+## Billing Types
+
+<ResponseField name="BillingType" type="enum">
+  | Value | Description |
+  |-------|-------------|
+  | `partner` | Your platform collects payment from the customer; Yelp debits your account for revenue sharing. |
+  | `yelp` | Yelp collects payment via the user's credit card; Yelp credits your account for revenue sharing. |
+</ResponseField>
+
+---
+
+## IFrame Integration
+
+Yelp loads your ordering UI in an iframe to initiate the purchase flow. Your iframe page must be HTTPS and must not use mixed content. A `yelp_site` parameter (`www` or `m`) is appended to the iframe URL so you can serve appropriate desktop or mobile experiences.
+
+### IFrame URL Template
+
+```
+https://<partner_domain_path>/<partner_business_id>/?opportunity_token=<opportunity_token>&yelp_site=m&yelp_locale=en_US
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `partner_business_id` | Your business ID (from your data feed to Yelp). |
+| `opportunity_token` | UUID token you can use to look up the delivery address via the Yelp Checkout API. |
+| `yelp_site` | `www` for desktop; `m` for mobile. |
+| `yelp_locale` | Locale string (e.g., `en_US`). |
+
+<Warning>
+  Yelp strongly recommends implementing **double-submit protection** in your ordering flow. Only call the order create endpoint once per user order during the iframe session.
+</Warning>
+
+<Tip>
+  Always respond to every Yelp notification with HTTP `200`, even if you've already processed that `notification_id`. Yelp will retry until it receives a `200`, which can result in duplicate processing if your handler is not idempotent.
+</Tip>

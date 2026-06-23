@@ -1,22 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Yelp Developer",
+  "projectType": "api-service",
+  "projectName": "Yelp Developer",
+  "projectDescription": "Yelp's developer platform providing public Places API, AI-powered conversational search, and partner APIs for business data, advertising, leads, reservations, and analytics.",
   "theme": "luma",
-  "colors": {
-    "primary": "#db0404",
-    "light": "#2c243c"
-  },
-  "favicon": "https://media.brand.dev/3b110265-f8bc-4ca4-9593-fde60bad4073.png",
-  "logo": {
-    "light": "https://media.brand.dev/a099f942-1aa7-47fe-a1fd-8401da542d07.png",
-    "dark": "https://media.brand.dev/a099f942-1aa7-47fe-a1fd-8401da542d07.png"
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/Yelp/yelp-fusion"
-    }
-  },
+  "primaryColor": "#db0404",
+  "lightColor": "#2c243c",
+  "darkColor": null,
   "navigation": {
     "tabs": [
       {
@@ -133,5 +122,68 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Business search by keyword, location, category, and price level",
+    "Rich business data including ratings, reviews, hours, and photos",
+    "Fusion AI API for conversational natural-language business discovery",
+    "AI-assisted restaurant reservations via conversational chat",
+    "GraphQL API for flexible, customized data queries",
+    "Advertising management APIs for CPC, branded profiles, and sponsored listings",
+    "Leads API for receiving and responding to Request-a-Quote messages",
+    "Reporting API for business metrics and advertiser performance data",
+    "Webhooks for real-time event notifications",
+    "Partner Feeds for bulk daily business data via S3",
+    "Conversions API for offline/online attribution reporting",
+    "Reservations API for native booking flows",
+    "Business Subscriptions API for unified location management",
+    "Data Ingestion API for bulk business listing updates"
+  ],
+  "publicApiSurface": [
+    "GET /v3/businesses/search",
+    "GET /v3/businesses/search/phone",
+    "GET /v3/businesses/matches",
+    "GET /v3/businesses/{id}",
+    "GET /v3/businesses/{id}/reviews",
+    "GET /v3/businesses/{id}/review_highlights",
+    "GET /v3/transactions/{transaction_type}/search",
+    "GET /v3/businesses/engagement",
+    "GET /v3/businesses/{id}/service_offerings",
+    "GET /v3/events",
+    "GET /v3/events/{event_id}",
+    "GET /v3/events/featured",
+    "GET /v3/categories",
+    "GET /v3/categories/{alias}",
+    "GET /v3/autocomplete",
+    "POST /ai/chat/v2",
+    "POST /v3/graphql",
+    "POST /v3/reporting/businesses/daily",
+    "POST /v3/reporting/businesses/monthly",
+    "GET /v3/reporting/businesses/daily/{report_id}",
+    "GET /v3/reporting/businesses/monthly/{report_id}",
+    "GET /v3/leads/{id}",
+    "GET /v3/leads/{id}/events",
+    "POST /v3/leads/{id}/events",
+    "POST /v3/leads/{id}/mark_as_replied",
+    "POST /v3/webhooks",
+    "DELETE /v3/webhooks/{webhook_id}",
+    "GET /v3/business_subscriptions",
+    "POST /v3/business_subscriptions",
+    "DELETE /v3/business_subscriptions",
+    "GET /v3/businesses/{id}/waitlist/status",
+    "GET /v3/businesses/{id}/waitlist/info",
+    "POST /v3/businesses/{id}/waitlist/visits",
+    "GET /v3/visits/{visit_id}",
+    "POST /v3/visits/{visit_id}/cancel",
+    "GET /v3/bookings/{id}/openings",
+    "POST /v3/bookings/{id}/holds",
+    "POST /v3/bookings/{id}/reservations",
+    "POST /v3/bookings/{id}/reservations/{reservation_id}/cancel",
+    "POST /v3/conversion/event",
+    "POST /v3/conversion/events",
+    "POST partner-api.yelp.com/v1/reseller/program/create",
+    "POST partner-api.yelp.com/v1/reseller/program/{program_id}/edit",
+    "POST partner-api.yelp.com/v1/reseller/program/{program_id}/end",
+    "GET partner-api.yelp.com/v1/reseller/status/{job_id}"
+  ]
 }

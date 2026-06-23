@@ -1,0 +1,356 @@
+---
+title: "Send Offline Conversions for Yelp Attribution Reporting"
+sidebarTitle: "Conversions API"
+description: "Submit purchase and lead events to Yelp's Conversions API to measure ROAS and get accurate attribution reporting for your Yelp ad spend."
+---
+
+The Yelp Conversions API (CAPI) lets you send offline conversion data — purchases, leads, or custom events — back to Yelp so that Yelp can attribute those conversions to your Yelp advertising campaigns. By closing the loop between ad clicks and real-world outcomes, you get accurate return-on-ad-spend (ROAS) reporting and a clearer picture of how Yelp drives business results.
+
+<Note>
+  The Conversions API is currently designed for **larger businesses with 10 or more locations**. Businesses below this threshold may not receive attribution reporting at this time. Your Yelp Sales or Customer Success representative must activate your API key before you can begin sending events.
+</Note>
+
+By using the Conversions API you agree that attribution services are subject to [Yelp's Attribution Terms](https://terms.yelp.com/attribution/). If you are implementing CAPI on behalf of an advertiser, you additionally agree to act as the advertiser's agent under those Terms.
+
+## Setup
+
+<Steps>
+  <Step title="Create a Yelp API app and obtain credentials">
+    Sign in at [yelp.com/developers/v3/manage_app](https://www.yelp.com/developers/v3/manage_app) with your Yelp consumer account and create a new app. Use a contact email that Yelp can reach for any integration questions. When the app is created, you receive two credentials:
+
+    - **Client ID** — send this to Yelp to link your app to your advertiser account
+    - **API Key** — required for authenticating API requests; treat this as a secret
+  </Step>
+
+  <Step title="Send your Client ID to Yelp">
+    Share your Client ID with your Yelp Sales or Customer Success representative via your CAPI integration email thread. Yelp uses this to connect your app to your advertiser profile.
+  </Step>
+
+  <Step title="Yelp activates your API key">
+    After Yelp confirms your Client ID is linked, your API Key is activated for the Conversion endpoints. You will receive confirmation before these endpoints respond with anything other than `404`.
+  </Step>
+
+  <Step title="Normalize and hash your PII data">
+    All personally identifiable information (PII) must be normalized and SHA-256 hashed before it is sent to Yelp. See the [data preparation](#preparing-your-data) section below for the exact rules.
+  </Step>
+
+  <Step title="Send conversion events">
+    Send events via the API (single or bulk endpoint) or by uploading an NDJson file to Yelp's S3 bucket. Yelp recommends sending data at least monthly; weekly, daily, or real-time cadences are all supported.
+  </Step>
+</Steps>
+
+## What data you'll need
+
+The more data you send, the higher the match rate against Yelp user profiles and the more accurate your attribution reports will be. Send all available data.
+
+**Required fields:**
+
+- `event_id` — unique identifier for deduplication (strongly recommended)
+- `event_time` — Unix timestamp of when the conversion occurred
+- `event_name` — type of conversion (`purchase`, `lead`, or `custom_*`)
+- `action_source` — where the conversion happened (`app`, `physical_store`, or `website`)
+- At least one of: `em` (email) or `ph` (phone number), hashed
+
+**Strongly recommended:**
+
+- Purchase `value` and `currency` (required to calculate ROAS)
+- Customer name (`fn`, `ln`)
+- Address fields (`ct`, `st`, `zp`, `country`)
+
+<Note>
+  Only send events relevant to the conversion you want to measure. Do not send page views, category views, or other non-conversion events — they degrade attribution accuracy.
+</Note>
+
+## Preparing your data
+
+### Normalizing data
+
+Before hashing, normalize all string fields to:
+
+1. **Lowercase** all characters
+2. **Remove all spaces** (including leading and trailing)
+3. **Remove special characters** where specified in the field description
+
+**Phone numbers** must be exactly **11 digits** with a leading `1` as the country code — no plus sign, no dashes, no parentheses:
+
+```
+(281) 330-8004  →  12813308004
+```
+
+**Example normalization:**
+
+| Raw value | Normalized |
+|-----------|------------|
+| `+1 (777) -111-1314` | `17771111314` |
+| `FirstLast@gmail.com` | `firstlast@gmail.com` |
+| `First` | `first` |
+
+### Hashing data
+
+Hash all normalized PII fields using **SHA-256** before sending. Fields that must be hashed are marked in the schema table below.
+
+**Do not hash** the following fields — send them as plain text:
+
+- `client_ip_address`
+- `client_user_agent`
+- `lead_id`
+
+<Warning>
+  Yelp's system is designed to reject unhashed PII. Sending unhashed personal data will result in an error response.
+</Warning>
+
+## Conversion data schema
+
+```json
+{
+  "event_id": "String",
+  "event_time": "Integer (Unix timestamp)",
+  "event_name": "String",
+  "action_source": "String",
+  "user_data": {
+    "em": ["Array[String] — hashed email(s)"],
+    "fn": "String — hashed first name",
+    "ln": "String — hashed last name",
+    "db": "String — hashed birth date YYYYMMDD",
+    "ge": "String — hashed gender (f/m/n)",
+    "ph": ["Array[String] — hashed phone(s)"],
+    "country": ["Array[String] — hashed ISO-3166 country code"],
+    "st": ["Array[String] — hashed state/province abbreviation"],
+    "zp": ["Array[String] — hashed zip/postal code"],
+    "ct": ["Array[String] — hashed city (no spaces)"],
+    "external_id": ["Array[String] — hashed loyalty ID or other unique ID"],
+    "client_ip_address": "String — NOT hashed",
+    "client_user_agent": "String — NOT hashed",
+    "lead_id": "String — NOT hashed (Yelp Leads API only)",
+    "madid": "String — mobile advertiser ID (IDFA/AAID)"
+  },
+  "custom_data": {
+    "value": "Float — required for purchase events",
+    "currency": "String — USD or CAD",
+    "order_id": "String",
+    "content_category": "String",
+    "content_ids": ["Array[String]"],
+    "contents": ["Array[Object]"],
+    "event_labels": ["Array[Object]"]
+  }
+}
+```
+
+### Field reference
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `event_id` | No (strongly recommended) | Used with `event_name` for deduplication; max 128 chars |
+| `event_time` | Yes | Unix timestamp in seconds; must be in the past |
+| `event_name` | Yes | `purchase`, `lead`, or `custom_*` (custom must start with `"custom_"`) |
+| `action_source` | Yes | `"app"`, `"physical_store"`, or `"website"` |
+| `user_data.em` | No | Hashed email array |
+| `user_data.ph` | No | Hashed phone array; 11 digits starting with 1 |
+| `user_data.fn` / `ln` | No | Hashed first / last name |
+| `custom_data.value` | Yes for `purchase` | Required for ROAS; cannot be negative |
+| `custom_data.currency` | No | `"USD"` or `"CAD"` |
+| `event_labels` | No | Up to 10 unique `{event_label, event_value}` pairs for segmentation |
+
+### Event names
+
+- `purchase` — use when a transaction completes; include `value` for ROAS
+- `lead` — use when a customer submits an inquiry or lead form
+- `custom_*` — any name starting with `custom_`, using only `A-Z a-z 0-9 _-`; e.g., `custom_file_download`
+
+## Example purchase event
+
+```json
+{
+  "event_id": "bd15c2b0-2375-4f53-91b1-a959cfd30ee1",
+  "event_time": 1685969768,
+  "event_name": "purchase",
+  "action_source": "physical_store",
+  "user_data": {
+    "em": [
+      "87924606b4131a8aceeeae8868531fbb9712aaa07a5d3a756b26ce0f5d6ca674"
+    ],
+    "fn": "96d9632f363564cc3032521409cf22a852f2032eec099ed5967c0d000cec607a",
+    "ln": "6627835f988e2c5e50533d491163072d3f4f41f5c8b04630150debb3722ca2dd",
+    "ph": [
+      "9107723e93f766c6f93357d2968323fbf51c2846362eb0ae4ab7c3de3a443a8f"
+    ],
+    "client_ip_address": "111.111.111.111",
+    "client_user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_5_1 like Mac OS X) AppleWebKit/605.1.15"
+  },
+  "custom_data": {
+    "value": 100.55,
+    "currency": "USD",
+    "order_id": "bd15c2b0-2375-4f53-91b1-a959cfd30ee1",
+    "content_category": "grocery",
+    "event_labels": [
+      {
+        "event_label": "customer_type",
+        "event_value": "new_customer"
+      }
+    ]
+  }
+}
+```
+
+## Deduplication
+
+To prevent the same conversion from being counted twice, Yelp deduplicates using the combination of `event_id` + `event_name` as a unique key. If you submit an event without an `event_id`, no deduplication is performed and every submission is treated as a unique conversion.
+
+<Tip>
+  Use a stable, business-assigned identifier for `event_id` — such as an order ID or an internal conversion reference — so that retries or duplicate uploads don't inflate your conversion counts.
+</Tip>
+
+## Sending data
+
+<Tabs>
+  <Tab title="API">
+    Two endpoints are available depending on your volume:
+
+    | Endpoint | Description |
+    |----------|-------------|
+    | `POST /v3/conversion/event` | Single event; body is one JSON object |
+    | `POST /v3/conversion/events` | Bulk events; body is an array, max 1,000 per request |
+
+    Authentication uses the same Bearer token pattern as the Fusion API:
+
+    ```http
+    Authorization: Bearer YOUR_API_KEY
+    ```
+
+    **Single event example:**
+
+    ```bash
+    curl --request POST \
+         --url https://api.yelp.com/v3/conversion/event \
+         --header 'Authorization: Bearer API_KEY' \
+         --header 'Content-Type: application/json' \
+         --data '{
+           "event": {
+             "event_id": "unique_string_to_identify_this_conversion_event",
+             "event_time": 1693946978,
+             "event_name": "purchase",
+             "action_source": "website",
+             "user_data": {
+               "em": ["hashed_email_string"],
+               "fn": "hashed_first_name_string",
+               "ph": ["hashed_phone_number_string"],
+               "client_ip_address": "192.168.1.1",
+               "client_user_agent": "Chrome/51.0.2704.103"
+             },
+             "custom_data": {
+               "value": 10.0,
+               "currency": "USD"
+             }
+           },
+           "test_event": true
+         }'
+    ```
+
+    **Bulk event example:**
+
+    ```bash
+    curl --request POST \
+         --url https://api.yelp.com/v3/conversion/events \
+         --header 'Authorization: Bearer API_KEY' \
+         --header 'Content-Type: application/json' \
+         --data '{
+           "events": [
+             {
+               "event_id": "unique_string_to_identify_this_conversion_event",
+               "event_time": 1693946978,
+               "event_name": "purchase",
+               "action_source": "website",
+               "user_data": {
+                 "em": ["hashed_email_string"],
+                 "ph": ["hashed_phone_number_string"],
+                 "client_ip_address": "192.168.1.1",
+                 "client_user_agent": "Chrome/51.0.2704.103"
+               },
+               "custom_data": {
+                 "value": 10.0,
+                 "currency": "USD"
+               }
+             }
+           ],
+           "test_event": false
+         }'
+    ```
+
+    ### Rate limits
+
+    | Limit | Value |
+    |-------|-------|
+    | Requests per second | 100 |
+    | Requests per day | 50,000 |
+
+    If you exceed 50,000 requests/day, contact Yelp to discuss increased limits. For high-volume use cases, use the Bulk endpoint to batch up to 1,000 events per request.
+
+    ### Test mode
+
+    Add `"test_event": true` to any request to run full validation without writing data to the production system. Use this during integration testing to confirm your payload structure is correct.
+
+    ### Error codes
+
+    | Code | Meaning |
+    |------|---------|
+    | `400 Bad Request` | Missing required fields or fields are not properly hashed |
+    | `401 Unauthorized` | API Key is missing or invalid |
+    | `404 Not Found` | Your API key has not yet been activated by Yelp |
+    | `429 Too Many Requests` | Rate limit exceeded |
+  </Tab>
+  <Tab title="S3 Upload">
+    If you prefer a batch file-based approach, upload conversion data directly to Yelp's S3 bucket. This method works well for large historical backfills or for teams that prefer scheduled batch jobs over real-time API calls.
+
+    **Data format:** NDJson (Newline Delimited JSON) — one valid JSON conversion object per line. The schema is identical to the API schema.
+
+    ```json
+    {"event_id":"evt_001","event_time":1685969768,"event_name":"purchase","action_source":"physical_store","user_data":{"em":["<hashed>"]}}
+    {"event_id":"evt_002","event_time":1685969900,"event_name":"purchase","action_source":"physical_store","user_data":{"em":["<hashed>"]}}
+    ```
+
+    **Upload command:**
+
+    ```bash
+    aws s3 cp {filename}.json s3://yelp-external-capi/{client_id}/{filename}.json
+    ```
+
+    Replace `{filename}` with a unique file name (include a date range for easy organization) and `{client_id}` with the Client ID Yelp provided.
+
+    **Setup steps:**
+
+    1. Yelp provisions an AWS S3 bucket and access key pair for your account
+    2. You receive a temporary 1Password link with the access credentials (email verification required, no 1Password account needed)
+    3. Configure the AWS CLI with your access keys: `aws configure`
+    4. Upload your NDJson file using the command above
+
+    <Note>
+      Use a unique file name for every upload. Including the date range of the transactions in the file name is recommended for easier auditing.
+    </Note>
+  </Tab>
+  <Tab title="Zapier">
+    The Yelp CAPI Zapier app provides a no-code integration path for teams that don't have engineering resources for a direct API or S3 integration.
+
+    **Prerequisites:**
+
+    - You have reviewed the CAPI documentation and schema
+    - You have been assigned a Yelp Sales Engineer
+    - You have a Zapier account and a Yelp Business account
+    - Your CRM has a Zapier app that can surface purchase/transaction data
+
+    **Setup steps:**
+
+    1. In Zapier, create a new Zap with your CRM as the **trigger** step
+    2. Add **Yelp CAPI** as the action step and authenticate with your Yelp Business account
+    3. Map fields from your CRM trigger to the required CAPI fields
+    4. Enable **Test Event** in the Yelp CAPI configuration step and click **Test** to validate
+    5. Confirm the success message, then click **Publish**
+
+    <Note>
+      The Yelp CAPI Zapier app automatically normalizes and hashes your PII fields — you do not need to handle this yourself when using Zapier.
+    </Note>
+
+    If your CRM does not have a Zapier app but has an API, use the **Zapier Webhooks** trigger to connect to your CRM's API directly and retrieve the data you need before passing it to the Yelp CAPI action step.
+
+    For Zapier integration support, email [zapier-capi-support@yelp.com](mailto:zapier-capi-support@yelp.com).
+  </Tab>
+</Tabs>

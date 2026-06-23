@@ -1,0 +1,158 @@
+---
+title: "API Error Codes and Troubleshooting for Yelp APIs"
+sidebarTitle: "Errors"
+description: "Understand Yelp API error responses, common HTTP status codes, error_code values, and how to fix authentication and rate-limit issues."
+---
+
+When any Yelp API call fails, the response returns a non-200 HTTP status code alongside a JSON body that describes exactly what went wrong. Each error object includes a machine-readable `error_code`, a human-readable `error_message`, and a `more_info` link pointing to relevant documentation. Understanding these fields helps you quickly diagnose problems and build resilient error-handling logic in your integration.
+
+## Error Response Format
+
+Every error response wraps one or more error objects inside an `errors` array:
+
+```json
+{
+  "errors": [
+    {
+      "error_code": "NOT_AUTHENTICATED",
+      "error_message": "please authenticate",
+      "more_info": "https://www.yelp.com/developers/documentation/v2/overview"
+    }
+  ]
+}
+```
+
+### Error Object Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `object` | `string` (1–256 chars) | Object type; always `"Error"` |
+| `error_code` | `string` (1–64 chars) | Machine-readable code identifying the error |
+| `error_message` | `string` (1–1024 chars) | Human-readable description of the error |
+| `more_info` | `string` (1–1024 chars) | URL to Yelp documentation relevant to this error |
+
+---
+
+## Common Error Codes
+
+The table below lists the error codes you are most likely to encounter across all Yelp API endpoints. Individual endpoints may surface additional errors documented in their own reference pages.
+
+| HTTP Status | `error_code` | Meaning |
+|---|---|---|
+| `400` | `FIELD_REQUIRED` | A required request field is missing |
+| `400` | `VALIDATION_ERROR` | A field value is present but invalid |
+| `401` | `UNAUTHORIZED` / `NOT_AUTHENTICATED` | API key is missing or invalid |
+| `401` | `UNAUTHORIZED_API_KEY` | Your API key is not authorized for this endpoint |
+| `401` | `TOKEN_INVALID` | The API key or Authorization header format is invalid |
+| `403` | `Authorization Error` | Your account is not permitted to perform this action |
+| `404` | `Resource Not Found` | The requested resource does not exist |
+| `413` | `Payload Too Large` | The request body exceeds the size limit |
+| `429` | `TOO_MANY_REQUESTS_PER_SECOND` | You have exceeded your per-second QPS limit |
+| `429` | `ACCESS_LIMIT_REACHED` | You have exceeded your daily API call limit |
+| `500` | `INTERNAL_SERVER_ERROR` | An unexpected error occurred on Yelp's servers |
+| `503` | `Service Unavailable` | The Yelp service is temporarily down |
+
+<Note>
+  Daily limits reset at **midnight UTC** every day. If you hit a `429` error, pause requests until the counter resets or upgrade your plan for a higher quota.
+</Note>
+
+---
+
+## Rate Limit Errors (429)
+
+When you exceed your request quota you will receive one of two 429 responses depending on whether you hit the per-second or daily limit.
+
+**Per-second QPS exceeded:**
+
+```json
+{
+  "errors": [
+    {
+      "error_code": "TOO_MANY_REQUESTS_PER_SECOND",
+      "error_message": "Too many requests per second. Please slow down your request rate.",
+      "more_info": "https://www.yelp.com/developers/documentation/v2/overview"
+    }
+  ]
+}
+```
+
+**Daily limit reached:**
+
+```json
+{
+  "errors": [
+    {
+      "error_code": "ACCESS_LIMIT_REACHED",
+      "error_message": "You've reached the access limit for this client. See instructions for requesting a higher access limit at the URL below.",
+      "more_info": "https://www.yelp.com/developers/documentation/v2/overview"
+    }
+  ]
+}
+```
+
+<Tip>
+  You can track your remaining daily calls by inspecting the response headers on every API request. Visit the [Rate Limiting](/docs/fusion-rate-limiting) page for header details.
+</Tip>
+
+---
+
+## Fusion API Error Format
+
+The Fusion AI API and some Fusion endpoints return errors in a slightly different envelope. Instead of an `errors` array, the response uses a single `error` object with `code` and `description` keys:
+
+```json
+{
+  "error": {
+    "code": "NOT_AUTHENTICATED",
+    "description": "Please authenticate."
+  }
+}
+```
+
+---
+
+## Partner & Checkout API Error Format
+
+The Partner and Checkout APIs use a similar single-object format with HTTP-status prefixed codes:
+
+```json
+{
+  "error": {
+    "code": "401_UNAUTHORIZED",
+    "description": "The credentials you provided are not authorized to access this resource."
+  }
+}
+```
+
+<Warning>
+  Always inspect both the HTTP status code **and** the `error_code` field in the response body. Some integrations that only check the HTTP status may miss actionable detail about the root cause.
+</Warning>
+
+---
+
+## Troubleshooting Tips
+
+<AccordionGroup>
+  <Accordion title="401 — Authentication errors">
+    Confirm your API key is present in every request as a Bearer token in the `Authorization` header:
+
+    ```bash
+    curl -H "Authorization: Bearer YOUR_API_KEY" \
+      "https://api.yelp.com/v3/businesses/search?term=coffee&location=sf"
+    ```
+
+    If you continue to receive `UNAUTHORIZED_API_KEY`, your key may not be provisioned for the endpoint you are calling. Check your plan tier on the [Manage App](https://www.yelp.com/developers/v3/manage_app) page.
+  </Accordion>
+
+  <Accordion title="400 — Validation errors">
+    Review the `error_message` field closely — it typically names the specific field that is missing or invalid. Double-check that required parameters (`location` or `latitude`/`longitude` for Business Search, for example) are included and formatted correctly.
+  </Accordion>
+
+  <Accordion title="429 — Rate limit errors">
+    Implement exponential back-off in your client. The daily limit resets at midnight UTC; the per-second limit recovers within one second. If you consistently hit daily limits, consider upgrading to a higher plan or contacting [sales](https://business.yelp.com/data/#form) to raise your quota.
+  </Accordion>
+
+  <Accordion title="500 / 503 — Server errors">
+    These errors originate on Yelp's infrastructure. Retry the request with exponential back-off. If the problem persists, open an issue on the [Yelp Fusion GitHub page](https://github.com/Yelp/yelp-fusion/issues).
+  </Accordion>
+</AccordionGroup>

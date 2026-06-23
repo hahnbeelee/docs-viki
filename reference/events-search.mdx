@@ -1,0 +1,181 @@
+---
+title: "GET /v3/events — Search for Local Yelp Events"
+sidebarTitle: "Events Search"
+description: "Search for local Yelp events by location, category, date range, and more. Returns a paginated list of event objects with details and metadata."
+---
+
+The Events Search endpoint lets you discover local happenings on Yelp. You can filter by location, date range, category, price (free vs. paid), and more. All parameters are optional, so a bare request returns events from across the Yelp platform — but combining `location` or coordinates with date filters gives you the most relevant results.
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/events
+```
+
+<Note>
+  Authenticate all requests with your private API Key in the `Authorization` header: `Authorization: Bearer YOUR_API_KEY`.
+</Note>
+
+## Query Parameters
+
+<ParamField query="locale" type="string">
+  Locale code for the response language (e.g., `en_US`, `fr_FR`). Defaults to `en_US`.
+</ParamField>
+
+<ParamField query="offset" type="integer">
+  Pagination offset. Use with `limit` to page through results. Defaults to `0`.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Number of events to return. Defaults to `3`; maximum is `50`.
+</ParamField>
+
+<ParamField query="sort_by" type="string">
+  Field to sort results by. Accepted values: `desc`, `asc`. Applies to the event start time.
+</ParamField>
+
+<ParamField query="categories" type="string">
+  Filter by event category alias (e.g., `music`, `food-and-drink`). Comma-delimited for multiple categories. See the [event categories resource](/docs/resources-event-categories) for the full list.
+</ParamField>
+
+<ParamField query="start_date" type="integer">
+  Unix timestamp — return only events that start on or after this time.
+</ParamField>
+
+<ParamField query="end_date" type="integer">
+  Unix timestamp — return only events that start on or before this time.
+</ParamField>
+
+<ParamField query="is_free" type="boolean">
+  Set to `true` to return only free events.
+</ParamField>
+
+<ParamField query="location" type="string">
+  A string describing the search area (e.g., `"San Francisco, CA"`, `"New York"`). Required if `latitude` and `longitude` are not provided.
+</ParamField>
+
+<ParamField query="latitude" type="number">
+  Latitude of the search center. Must be paired with `longitude`.
+</ParamField>
+
+<ParamField query="longitude" type="number">
+  Longitude of the search center. Must be paired with `latitude`.
+</ParamField>
+
+<ParamField query="radius" type="integer">
+  Search radius in meters. Maximum is `40000`.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/events?location=San+Francisco,CA&is_free=true&limit=5" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "total": 42,
+  "events": [
+    {
+      "id": "oakland-yelp-community-event-summer-block-party",
+      "name": "Summer Block Party",
+      "description": "Join the community for a free outdoor block party with live music, food trucks, and local art.",
+      "url": "https://www.yelp.com/events/oakland-summer-block-party",
+      "time_start": "2024-08-15 14:00",
+      "time_end": "2024-08-15 20:00",
+      "is_free": true,
+      "is_canceled": false,
+      "is_official": false,
+      "attending_count": 134,
+      "interested_count": 287,
+      "category": "music",
+      "business_id": "the-plaza-oakland",
+      "image_url": "https://s3-media1.fl.yelpcdn.com/event/example/o.jpg",
+      "tickets_url": null,
+      "cost": null,
+      "cost_max": null,
+      "location": {
+        "address1": "1 City Plaza",
+        "address2": "",
+        "address3": "",
+        "city": "Oakland",
+        "state": "CA",
+        "zip_code": "94612",
+        "country": "US",
+        "display_address": ["1 City Plaza", "Oakland, CA 94612"],
+        "cross_streets": ""
+      }
+    }
+  ]
+}
+```
+
+## Response Fields
+
+<ResponseField name="total" type="integer">
+  Total number of events matching the search criteria.
+</ResponseField>
+
+<ResponseField name="events" type="array">
+  Array of event objects.
+
+  <Expandable title="Event object fields">
+    <ResponseField name="id" type="string">
+      Unique Yelp event identifier.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Name of the event.
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Full description of the event.
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      URL to the event's Yelp page.
+    </ResponseField>
+    <ResponseField name="time_start" type="string">
+      Event start time in `YYYY-MM-DD HH:MM` format (local time).
+    </ResponseField>
+    <ResponseField name="time_end" type="string">
+      Event end time in `YYYY-MM-DD HH:MM` format. May be `null` if no end time is set.
+    </ResponseField>
+    <ResponseField name="is_free" type="boolean">
+      Whether the event is free to attend.
+    </ResponseField>
+    <ResponseField name="is_canceled" type="boolean">
+      Whether the event has been canceled.
+    </ResponseField>
+    <ResponseField name="attending_count" type="integer">
+      Number of Yelp users who have marked themselves as attending.
+    </ResponseField>
+    <ResponseField name="interested_count" type="integer">
+      Number of Yelp users who have marked themselves as interested.
+    </ResponseField>
+    <ResponseField name="category" type="string">
+      Event category alias (e.g., `music`, `food-and-drink`).
+    </ResponseField>
+    <ResponseField name="business_id" type="string">
+      Yelp ID of the host business, if associated with one.
+    </ResponseField>
+    <ResponseField name="image_url" type="string">
+      URL to the event's cover image.
+    </ResponseField>
+    <ResponseField name="cost" type="number">
+      Minimum ticket price. `null` for free events.
+    </ResponseField>
+    <ResponseField name="cost_max" type="number">
+      Maximum ticket price for tiered events. `null` if not applicable.
+    </ResponseField>
+    <ResponseField name="tickets_url" type="string">
+      URL to purchase tickets. `null` for free or unticketed events.
+    </ResponseField>
+    <ResponseField name="location" type="object">
+      Structured location with `address1`, `city`, `state`, `zip_code`, `country`, and `display_address`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>

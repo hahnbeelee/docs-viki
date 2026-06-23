@@ -1,0 +1,116 @@
+---
+title: "Yelp Places API: Business Search and Discovery"
+sidebarTitle: "Overview"
+description: "Full endpoint reference for the Yelp Places API, including business search, details, reviews, events, categories, and autocomplete."
+---
+
+The Yelp Places API gives you access to Yelp's database of millions of local businesses worldwide. With a single API key and a simple `Authorization` header, you can search for businesses by keyword or location, retrieve rich business profiles, read review excerpts, discover events, and power autocomplete experiences. All endpoints share the same base URL and authentication model.
+
+**Base URL:** `https://api.yelp.com/v3`
+
+---
+
+## Endpoint Reference
+
+### Businesses
+
+| Endpoint | Path | Description |
+|---|---|---|
+| Business Search | `GET /businesses/search` | Search for businesses by keyword, category, location, price level, and more. |
+| Phone Search | `GET /businesses/search/phone` | Look up businesses by phone number. |
+| Business Match | `GET /businesses/matches` | Match a business from an external source to a Yelp business using name and address. |
+| Business Details | `GET /businesses/{id}` | Retrieve rich data for a specific business: name, address, phone, photos, hours, rating, and more. |
+| Transaction Search | `GET /transactions/{transaction_type}/search` | Find businesses that support food delivery or other transaction types. |
+| Business Engagement Metrics | `GET /businesses/engagement` | Get consumer engagement metrics for a set of businesses. |
+| Business Service Offerings | `GET /businesses/{id}/service_offerings` | List active and eligible service offerings for a business. |
+
+### Reviews
+
+| Endpoint | Path | Description |
+|---|---|---|
+| Reviews | `GET /businesses/{id}/reviews` | Retrieve up to three review excerpts for a business. |
+| Review Highlights | `GET /businesses/{id}/review_highlights` | Get a business's curated review highlights (Premium plan required). |
+
+### Events
+
+| Endpoint | Path | Description |
+|---|---|---|
+| Events Search | `GET /events` | Search for Yelp events by location, date, category, and more. |
+| Event Lookup | `GET /events/{event_id}` | Get detailed information about a specific Yelp event. |
+| Featured Event | `GET /events/featured` | Get the featured event for a given location, chosen by Yelp's community managers. |
+
+### Categories
+
+| Endpoint | Path | Description |
+|---|---|---|
+| All Categories | `GET /categories` | Retrieve all Yelp business categories across all locales. |
+| Category by Alias | `GET /categories/{alias}` | Get detailed information about a specific Yelp category by its alias. |
+
+### Miscellaneous
+
+| Endpoint | Path | Description |
+|---|---|---|
+| Autocomplete | `GET /autocomplete` | Return autocomplete suggestions for businesses, search keywords, and categories. |
+
+---
+
+## Plan Comparison
+
+The attributes returned by Business Search and Business Details endpoints depend on your plan. All plans share the same base URL and authentication method.
+
+| Feature | Base | Enhanced | Premium |
+|---|---|---|---|
+| **Total attributes** | 15 | 23 | 66 |
+| Business name, address, phone | ✅ | ✅ | ✅ |
+| Hours of operation | ✅ | ✅ | ✅ |
+| Star rating & review count | ✅ | ✅ | ✅ |
+| Yelp profile URL | ✅ | ✅ | ✅ |
+| Business profile photo | ✅ | ✅ | ✅ |
+| Transactions (reservations, order, waitlist) | ✅ | ✅ | ✅ |
+| Price level | ❌ | ✅ | ✅ |
+| Up to 3 review excerpts | ❌ | ✅ | ✅ |
+| Up to 3 photos | ❌ | ✅ | ✅ |
+| Business website URL | ❌ | ✅ | ✅ |
+| Hot & New status | ❌ | ✅ | ✅ |
+| Review Highlights endpoint | ❌ | ❌ | ✅ |
+| Up to 7 review excerpts | ❌ | ❌ | ✅ |
+| Up to 12 photos | ❌ | ❌ | ✅ |
+| Premium search filters | ❌ | ❌ | ✅ |
+| About the Business (history, specialities, owner) | ❌ | ❌ | ✅ |
+| Customer experience attributes (ambience, noise, kids, etc.) | ❌ | ❌ | ✅ |
+| Additional features (parking, WiFi, alcohol, etc.) | ❌ | ❌ | ✅ |
+| **Early access to Yelp AI API** | ❌ | ❌ | ✅ (20 calls/day) |
+
+<Note>
+  The Yelp AI API is available as an early-access feature on the Premium plan,
+  giving you 20 AI API calls per day. See the [Yelp AI API](/docs/ai/overview)
+  documentation for details.
+</Note>
+
+---
+
+## Rate Limits
+
+All Places API endpoints share the same daily call pool. See [Rate Limits](/docs/rate-limiting) for a full breakdown of QPS limits, daily limits by plan, response headers, and how to request additional capacity.
+
+---
+
+## Explore Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Business Search" icon="magnifying-glass" href="/docs/places/business-search">
+    Search for businesses by keyword, category, location, and filters. Returns
+    up to 50 results per page with support for pagination.
+  </Card>
+  <Card title="Business Details" icon="circle-info" href="/docs/places/business-details">
+    Look up a specific business by its Yelp ID or alias. Returns all available
+    attributes for your plan tier.
+  </Card>
+  <Card title="Reviews" icon="star" href="/docs/places/reviews">
+    Retrieve up to three review excerpts per business, including rating,
+    reviewer name, and a link to the full review on Yelp.
+  </Card>
+  <Card title="Events" icon="calendar" href="/docs/places/events">
+    Search, look up, and feature local events near a given location.
+  </Card>
+</CardGroup>

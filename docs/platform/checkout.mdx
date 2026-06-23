@@ -1,0 +1,241 @@
+---
+title: "Process Yelp Orders with the Checkout and Fulfillment APIs"
+sidebarTitle: "Checkout"
+description: "Integrate ordering, scheduling, payment, fulfillment, and customer support into Yelp's transaction flow using the Checkout and Fulfillment APIs."
+---
+
+The Yelp Checkout and Fulfillment APIs connect your ordering infrastructure to Yelp's transaction flow. When a user submits an order on Yelp, your system receives a notification, fulfills the order through your own pipelines, and reports status changes back to Yelp — all in real time. This lets you integrate your existing ordering, scheduling, payment, and support processes without rebuilding them for Yelp.
+
+<Warning>
+  The Checkout API is a Yelp Partner API. Access is disabled by default. Contact Yelp to get started with an integration.
+</Warning>
+
+## Authentication
+
+The Checkout API uses **HTTP Basic Auth over HTTPS**. Yelp assigns you a username and password, which you supply in the `Authorization` header for every Checkout API request.
+
+```http
+Authorization: Basic <base64(username:password)>
+```
+
+All requests must be made over HTTPS. If an error occurs, the response returns a non-200 HTTP status code and a JSON body describing the problem:
+
+```json
+{
+  "error": {
+    "code": "401_UNAUTHORIZED",
+    "description": "This server could not verify that you are authorized to access the document requested. Either you supplied the wrong credentials (e.g., bad password), or your browser doesn't understand how to supply the credentials required."
+  }
+}
+```
+
+## Order lifecycle
+
+Every order on Yelp Platform moves through a defined set of statuses. Understanding this lifecycle is essential before you implement your notification handler.
+
+```
+User submits order
+        ↓
+  ready_for_fulfillment  ←─── Partner calls /update
+        ↓
+   (fulfillment)
+        ↓
+  cancelled              ←─── Partner calls /cancel
+  cancelled_by_user      ←─── User cancels on Yelp
+  cancelled_by_yelp      ←─── Yelp cancels the order
+```
+
+### Order status codes
+
+| Status | Description |
+|--------|-------------|
+| `pending_user_submit` | Order initiated but not yet submitted by the user |
+| `charge_pending` | Payment is being processed |
+| `ready_for_fulfillment` | Order confirmed and ready for the partner to fulfill |
+| `cancelled` | Partner cancelled the order via `/cancel` |
+| `cancelled_by_user` | User cancelled through Yelp |
+| `cancelled_by_yelp` | Yelp cancelled the order |
+
+## Notifications
+
+When an order status changes, Yelp POSTs an `OrderStatusChangeNotification` to the `notification_url` you provide during order creation. Your endpoint must respond with **HTTP 200** to acknowledge receipt.
+
+Yelp guarantees **at-least-once delivery**, so your handler must be idempotent — the same notification may arrive more than once.
+
+### notification_url requirements
+
+- Must be **HTTPS**
+- Must contain **no query parameters** (e.g., use `/food/notification` not `/notification?type=food`)
+- Must respond with **HTTP 200** within 5 seconds (Yelp retries up to 3 times on non-200 responses)
+
+### Notification events
+
+| Event | Notification received |
+|-------|-----------------------|
+| User submits order through Yelp | `order_status=ready_for_fulfillment` |
+| Partner calls `/update` | `order_status=ready_for_fulfillment` |
+| Partner calls `/cancel` | `order_status=cancelled` |
+| User cancels through Yelp | `order_status=cancelled_by_user` |
+
+### Example OrderStatusChangeNotification payload
+
+```json
+{
+  "object": "OrderStatusChangeNotification",
+  "order_id": "abc123def456",
+  "order_status": "ready_for_fulfillment",
+  "billing_type": "yelp",
+  "service_type": "food",
+  "collection_type": "prepaid",
+  "transaction_status_changes": [
+    {
+      "transaction_type": "charge",
+      "status": "succeeded"
+    }
+  ],
+  "fulfillment": {
+    "email": "user@example.com",
+    "phone": "4155551234",
+    "selected_option": "at_customer",
+    "address": {
+      "address1": "123 Main St",
+      "city": "San Francisco",
+      "region": "CA",
+      "postal_code": "94105",
+      "country": "US"
+    }
+  }
+}
+```
+
+<Note>
+  If a billing operation occurs (such as charging the user's credit card), the notification will also include `transaction_status_changes` describing the outcome of that payment event.
+</Note>
+
+## Service and billing types
+
+### ServiceType
+
+| Value | Description |
+|-------|-------------|
+| `food` | Food delivery or pickup orders |
+| `booking` | Appointments (spas, dentist, doctor) or future-scheduled services (plumber, repairs) |
+| `hotel_reservation` | Hotel room reservations |
+| `restaurant_reservation` | Restaurant table reservations |
+| `goods` | Physical goods orders |
+| `medical_compliant` | Medically compliant service bookings |
+
+### BillingType
+
+| Value | Description |
+|-------|-------------|
+| `partner` | The partner collects payment from the user |
+| `yelp` | Yelp collects payment; `prepaid` orders are charged at submission without requiring an explicit partner API call |
+
+## Fulfillment API
+
+The Fulfillment API is the **partner-side** half of the integration. Yelp calls your Fulfillment API endpoints in real time to check availability before a user enters the ordering flow. You implement these endpoints on your own servers and register their URLs with Yelp.
+
+### Opportunity resource
+
+When Yelp checks availability, it sends an `Opportunity` object describing what the user wants:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object` | string | Always `"Opportunity"` |
+| `opportunity_token` | uuid_hex | Unique identifier for this ordering session |
+| `partner_business_id` | string | Your business ID (as submitted via Data Ingestion) |
+| `request_time` | timestamp | ISO 8601 UTC time of the user's request |
+| `service_type` | ServiceType | The requested service (food, booking, etc.) |
+| `selected_option` | OptionType | `at_customer` (delivery) or `at_business` (pickup) |
+| `availability_constraints` | array | User-entered constraints, e.g., delivery address |
+
+### AvailabilityStatus values
+
+Your Fulfillment API responds with one of these statuses to tell Yelp whether you can fulfill the order:
+
+| Status | Description |
+|--------|-------------|
+| `available` | You can fulfill this request |
+| `available_can_fulfill_reorder` | You can fulfill a repeat order (with possible item changes) |
+| `unsupported` | This `service_type`/`selected_option` combination is not supported |
+| `unsupported_by_business` | This specific business doesn't support the requested service |
+| `not_available_outside_of_hours` | The business is not open at the requested time |
+| `not_available_outside_of_area` | Delivery address is outside the business's service area |
+| `not_available_invalid_address` | Delivery address is invalid or malformed |
+| `not_available_ambiguous_address` | Delivery address matches multiple locations |
+| `not_available_cannot_fulfill_reorder` | Cannot service the referenced repeat order |
+| `not_available_other` | Unavailable for any other reason |
+| `no_inventory_available` | No inventory available for pickup at this time |
+
+## Transaction Iframe
+
+The Transaction Iframe is how your ordering or booking interface appears inside Yelp's pages. Yelp loads the iframe URL you register, appending context parameters automatically.
+
+### Iframe URL template
+
+```
+https://<partner_domain_path>/<partner_business_id>/?opportunity_token=<token>&yelp_site=m&yelp_locale=en_US
+```
+
+Your `partner_domain_path` must be pre-registered with Yelp. The iframe URL and all its assets must be served over HTTPS.
+
+### Request parameters Yelp appends
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `partner_business_id` | string | Your business ID from the Data Ingestion feed |
+| `opportunity_token` | uuid_hex | Use this token to look up the delivery address via the Checkout API |
+| `pickup` | boolean | `true` if the user selected pickup |
+| `yelp_site` | string | `www` (desktop) or `m` (mobile) |
+| `yelp_locale` | string | Locale string, e.g., `en_US` |
+
+### Cross-domain communication
+
+Your iframe communicates with the Yelp parent page using `window.postMessage`. Derive the `targetOrigin` from the `yelp_site` and `yelp_locale` parameters to prevent origin spoofing.
+
+```javascript
+// Example: scroll the parent page to offset 64px
+window.top.postMessage(
+  '{"eventType": "scrollTop", "offset": "64"}',
+  'https://www.yelp.com'
+);
+```
+
+<Warning>
+  Always validate `yelp_site` (must be `www` or `m`) and `yelp_locale` before computing `targetOrigin`. Invalid values should be treated as errors to prevent targetOrigin hijacking.
+</Warning>
+
+Yelp also uses the `setHeight` event to dismiss the webview's loading spinner. Ensure your iframe fires `setHeight` only once the content is fully interactive.
+
+### Mobile vs. desktop
+
+Use the `yelp_site` parameter to serve the appropriate interface:
+
+- `yelp_site=m` — mobile (iPhone, iPod, FirefoxOS, Android phones and tablets)
+- `yelp_site=www` — desktop (includes iPads, Windows Phone, Blackberry)
+
+### Double-submit protection
+
+Implement double-submit protection in your iframe flow. Call `/checkout/orders/create/v3` **exactly once** per user order. Submitting the same order twice can result in duplicate charges or duplicate fulfillment requests.
+
+## Order confirmation page
+
+After a successful checkout, Yelp displays an order confirmation page where users can view their order items and contact support. This page shows:
+
+- A summary of items ordered
+- Your chat support link (if you provide one), or your support phone number, or a generic "contact [partner name]" message
+
+<Note>
+  The order confirmation page is currently available for **food verticals only** and is not shown to guest (unauthenticated) users.
+</Note>
+
+## Finding businesses that support a transaction type
+
+To discover which businesses support a specific transaction type on Yelp, query the Transactions Search endpoint:
+
+```http
+GET /v3/transactions/{transaction_type}/search
+```
+
+Replace `{transaction_type}` with the service type (e.g., `food`, `restaurant_reservation`) to get a list of businesses offering that transaction through Yelp Platform.

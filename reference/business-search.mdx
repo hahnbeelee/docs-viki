@@ -1,0 +1,252 @@
+---
+title: "GET /v3/businesses/search — Search Yelp Businesses"
+sidebarTitle: "Business Search"
+description: "Search millions of Yelp businesses by keyword, location, category, price, and more. Returns up to 50 results per page with a maximum of 240 total."
+---
+
+The Business Search endpoint is the primary way to discover businesses on Yelp. You can search by keyword, category, location, price level, and a wide range of filters. Every request must include at least one location parameter — either a `location` string or a `latitude`/`longitude` pair. Results are paginated up to 240 total per unique search query.
+
+## Endpoint
+
+```
+GET https://api.yelp.com/v3/businesses/search
+```
+
+## Authentication
+
+Include your API key as a Bearer token in the `Authorization` header of every request.
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Request Parameters
+
+### Required (at least one of the following)
+
+<ParamField query="location" type="string">
+  A location string such as an address, neighborhood, city, state, or zip code. Examples: `"San Francisco, CA"`, `"94133"`, `"New York"`. Required if `latitude` and `longitude` are not provided.
+</ParamField>
+
+<ParamField query="latitude" type="number">
+  Latitude of the search location. Must be between **-90** and **90**. Required together with `longitude` if `location` is not provided.
+</ParamField>
+
+<ParamField query="longitude" type="number">
+  Longitude of the search location. Must be between **-180** and **180**. Required together with `latitude` if `location` is not provided.
+</ParamField>
+
+### Optional
+
+<ParamField query="term" type="string">
+  A search term to filter results — for example, `"food"`, `"restaurants"`, or `"tacos"`. If not set, the search returns all businesses matching the location criteria.
+</ParamField>
+
+<ParamField query="radius" type="integer">
+  Search radius in meters around the specified location. Maximum value is **40,000** meters (~25 miles). If not provided, Yelp selects a sensible default based on the search area.
+</ParamField>
+
+<ParamField query="categories" type="string">
+  A comma-separated list of category aliases to filter results. For example, `"bars,french"`. See the [category list](https://docs.developer.yelp.com/docs/resources-categories) for all valid aliases.
+</ParamField>
+
+<ParamField query="price" type="string">
+  Filter by price level. Pass a comma-separated string of one or more values: `"1"` ($), `"2"` ($$), `"3"` ($$$), `"4"` ($$$$). Example: `"1,2"` returns budget and mid-range businesses.
+</ParamField>
+
+<ParamField query="open_now" type="boolean">
+  When `true`, only returns businesses that are currently open. Cannot be used together with `open_at`.
+</ParamField>
+
+<ParamField query="open_at" type="integer">
+  Unix timestamp (seconds since epoch) to filter businesses open at a specific time. Cannot be used together with `open_now`.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Number of results to return per page. Must be between **1** and **50**. Defaults to **20**.
+</ParamField>
+
+<ParamField query="offset" type="integer">
+  Offset into the total result set for pagination. For example, to get results 21–40, set `offset=20`. Combined with `limit`, the maximum reachable offset is 240 results total.
+</ParamField>
+
+<ParamField query="sort_by" type="string">
+  Sorting criteria for results. Accepted values:
+  - `best_match` (default) — Yelp's relevance algorithm
+  - `rating` — highest rated first
+  - `review_count` — most reviewed first
+  - `distance` — closest first
+</ParamField>
+
+<ParamField query="locale" type="string">
+  Locale code to return results in a specific language and region, for example `"en_US"` or `"fr_FR"`. Defaults to `"en_US"`. See the [supported locales](https://docs.developer.yelp.com/docs/resources-supported-locales) list.
+</ParamField>
+
+<ParamField query="attributes" type="string">
+  A comma-separated list of business attributes to filter on. Supported values include `hot_and_new`, `request_a_quote`, `reservation`, `waitlist_reservation`, `cashback`, `deals`, `gender_neutral_restrooms`, `open_to_all`, `wheelchair_accessible`.
+</ParamField>
+
+<Note>
+  You can retrieve a maximum of **240 results** per unique search query. Use `limit` (up to 50) and `offset` to page through results. Searching with `offset=200` and `limit=40` returns the final page.
+</Note>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url 'https://api.yelp.com/v3/businesses/search?term=delis&latitude=37.786882&longitude=-122.399972&limit=3&sort_by=rating' \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+```
+
+```python Python
+import requests
+
+url = "https://api.yelp.com/v3/businesses/search"
+headers = {"Authorization": "Bearer YOUR_API_KEY"}
+params = {
+    "term": "delis",
+    "latitude": 37.786882,
+    "longitude": -122.399972,
+    "limit": 3,
+    "sort_by": "rating"
+}
+
+response = requests.get(url, headers=headers, params=params)
+print(response.json())
+```
+
+```javascript Node.js
+const axios = require("axios");
+
+const response = await axios.get(
+  "https://api.yelp.com/v3/businesses/search",
+  {
+    headers: { Authorization: "Bearer YOUR_API_KEY" },
+    params: {
+      term: "delis",
+      latitude: 37.786882,
+      longitude: -122.399972,
+      limit: 3,
+      sort_by: "rating",
+    },
+  }
+);
+console.log(response.data);
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "total": 1316,
+  "businesses": [
+    {
+      "id": "molinari-delicatessen-san-francisco",
+      "alias": "molinari-delicatessen-san-francisco",
+      "name": "Molinari Delicatessen",
+      "url": "https://www.yelp.com/biz/molinari-delicatessen-san-francisco",
+      "rating": 4.5,
+      "review_count": 910,
+      "price": "$$",
+      "phone": "+14154212337",
+      "is_closed": false,
+      "transactions": ["pickup", "delivery"],
+      "distance": 312.4,
+      "categories": [
+        { "alias": "delis", "title": "Delis" }
+      ],
+      "coordinates": {
+        "latitude": 37.7983818054199,
+        "longitude": -122.407821655273
+      },
+      "location": {
+        "address1": "373 Columbus Ave",
+        "address2": "",
+        "address3": "",
+        "city": "San Francisco",
+        "state": "CA",
+        "zip_code": "94133",
+        "country": "US",
+        "display_address": ["373 Columbus Ave", "San Francisco, CA 94133"]
+      },
+      "image_url": "https://s3-media4.fl.yelpcdn.com/bphoto/6He-NlZrAv2mDV-yg6jW3g/o.jpg"
+    }
+  ],
+  "region": {
+    "center": {
+      "latitude": 37.786882,
+      "longitude": -122.399972
+    }
+  }
+}
+```
+
+## Response Fields
+
+<ResponseField name="total" type="integer">
+  Total number of businesses matching the search query. This can be larger than the number returned in a single response page.
+</ResponseField>
+
+<ResponseField name="businesses" type="array">
+  Array of business objects matching the search criteria. Up to `limit` items per page.
+
+  <Expandable title="Business object fields">
+    <ResponseField name="id" type="string">
+      Unique Yelp business identifier.
+    </ResponseField>
+    <ResponseField name="alias" type="string">
+      URL-safe string identifier for the business, for example `"molinari-delicatessen-san-francisco"`.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Business name.
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      URL of the Yelp business page.
+    </ResponseField>
+    <ResponseField name="rating" type="number">
+      Yelp rating of the business, from 1.0 to 5.0.
+    </ResponseField>
+    <ResponseField name="review_count" type="integer">
+      Total number of reviews for the business.
+    </ResponseField>
+    <ResponseField name="price" type="string">
+      Price level indicator: `"$"`, `"$$"`, `"$$$"`, or `"$$$$"`.
+    </ResponseField>
+    <ResponseField name="is_closed" type="boolean">
+      Whether the business is permanently closed.
+    </ResponseField>
+    <ResponseField name="transactions" type="array">
+      List of transaction types supported: `"pickup"`, `"delivery"`, `"restaurant_reservation"`.
+    </ResponseField>
+    <ResponseField name="distance" type="number">
+      Distance from the search location in meters. Only present when latitude/longitude is provided.
+    </ResponseField>
+    <ResponseField name="categories" type="array">
+      List of category objects with `alias` and `title` fields.
+    </ResponseField>
+    <ResponseField name="coordinates" type="object">
+      Object with `latitude` and `longitude` of the business.
+    </ResponseField>
+    <ResponseField name="location" type="object">
+      Address details including `address1`, `address2`, `address3`, `city`, `state`, `zip_code`, `country`, and `display_address` (formatted array).
+    </ResponseField>
+    <ResponseField name="image_url" type="string">
+      URL of the business photo.
+    </ResponseField>
+    <ResponseField name="phone" type="string">
+      Phone number in E.164 format, e.g. `"+14154212337"`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="region" type="object">
+  Center coordinates Yelp used for the search, with `latitude` and `longitude`.
+</ResponseField>
+
+<Tip>
+  To implement infinite-scroll or "load more" pagination, increment the `offset` by your `limit` value on each subsequent request until `offset >= total` or you reach 240.
+</Tip>

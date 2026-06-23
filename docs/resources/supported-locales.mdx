@@ -1,0 +1,93 @@
+---
+title: "Supported Locales for the Yelp Places API"
+sidebarTitle: "Locales"
+description: "Complete list of 42 locales supported by the Yelp Places API, with language and country codes for localizing business search results."
+---
+
+The Yelp Places API lets you localize search results and business data by passing a `locale` parameter in your requests. Each locale code follows the pattern `{language_code}_{country_code}`, where the language portion uses [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) alpha-2 codes (or [ISO 639-2](https://en.wikipedia.org/wiki/ISO_639-2) alpha-3 when a two-letter code is unavailable), and the country portion uses [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) codes. When no `locale` is specified, the API defaults to `en_US`.
+
+## Using the Locale Parameter
+
+Pass the `locale` query parameter to any search or business-details endpoint to receive localized content such as translated category names and region-appropriate formatting:
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://api.yelp.com/v3/businesses/search?term=ramen&location=Tokyo&locale=ja_JP"
+```
+
+<Note>
+  Not all business data is translated. The `locale` parameter primarily affects category labels, sorting defaults, and the language of any Yelp-generated text. Business owner-provided content (names, descriptions) will appear in the language the owner entered.
+</Note>
+
+---
+
+## All Supported Locales
+
+The table below lists all 42 locale codes the Yelp Places API currently supports.
+
+| Locale Code | Country | Language |
+|---|---|---|
+| `cs_CZ` | Czech Republic | Czech |
+| `da_DK` | Denmark | Danish |
+| `de_AT` | Austria | German |
+| `de_CH` | Switzerland | German |
+| `de_DE` | Germany | German |
+| `en_AU` | Australia | English |
+| `en_BE` | Belgium | English |
+| `en_CA` | Canada | English |
+| `en_CH` | Switzerland | English |
+| `en_GB` | United Kingdom | English |
+| `en_HK` | Hong Kong | English |
+| `en_IE` | Republic of Ireland | English |
+| `en_MY` | Malaysia | English |
+| `en_NZ` | New Zealand | English |
+| `en_PH` | Philippines | English |
+| `en_SG` | Singapore | English |
+| `en_US` | United States | English |
+| `es_AR` | Argentina | Spanish |
+| `es_CL` | Chile | Spanish |
+| `es_ES` | Spain | Spanish |
+| `es_MX` | Mexico | Spanish |
+| `fi_FI` | Finland | Finnish |
+| `fil_PH` | Philippines | Filipino |
+| `fr_BE` | Belgium | French |
+| `fr_CA` | Canada | French |
+| `fr_CH` | Switzerland | French |
+| `fr_FR` | France | French |
+| `it_CH` | Switzerland | Italian |
+| `it_IT` | Italy | Italian |
+| `ja_JP` | Japan | Japanese |
+| `ms_MY` | Malaysia | Malay |
+| `nb_NO` | Norway | Norwegian |
+| `nl_BE` | Belgium | Dutch |
+| `nl_NL` | The Netherlands | Dutch |
+| `pl_PL` | Poland | Polish |
+| `pt_BR` | Brazil | Portuguese |
+| `pt_PT` | Portugal | Portuguese |
+| `sv_FI` | Finland | Swedish |
+| `sv_SE` | Sweden | Swedish |
+| `tr_TR` | Turkey | Turkish |
+| `zh_HK` | Hong Kong | Chinese |
+| `zh_TW` | Taiwan | Chinese |
+
+---
+
+## Notes on Specific Locales
+
+<AccordionGroup>
+  <Accordion title="Multi-locale countries">
+    Several countries appear multiple times in the table because they have more than one official or widely-used language. For example, Switzerland is available as `de_CH` (German), `fr_CH` (French), `it_CH` (Italian), and `en_CH` (English). Belgium appears as `nl_BE` (Dutch), `fr_BE` (French), and `en_BE` (English). Use the locale that best matches your end users' language preference.
+  </Accordion>
+
+  <Accordion title="Filipino (fil_PH)">
+    Filipino uses the ISO 639-2 alpha-3 code `fil` because there is no ISO 639-1 two-letter code for the language. This is the only locale in the supported list that uses a three-letter language code.
+  </Accordion>
+
+  <Accordion title="Default locale">
+    If you omit the `locale` parameter entirely, the API falls back to `en_US`. Always specify a locale explicitly if your application targets non-US English-speaking or non-English-speaking audiences.
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  If your target country or language is not in the list above, use the closest available locale or default to `en_US`. You can open a feature request on the [Yelp Fusion GitHub page](https://github.com/Yelp/yelp-fusion/issues) to ask for additional locale support.
+</Tip>

@@ -1,0 +1,131 @@
+---
+title: "POST /v3/bookings/{id}/reservations — Book a Reservation"
+sidebarTitle: "Book Reservation"
+description: "Create a confirmed Yelp reservation for a user. Requires a valid hold_id from the Holds endpoint plus the user's contact details and unique identifier."
+---
+
+The Book Reservation endpoint creates a confirmed reservation at a Yelp Reservations restaurant. You must first complete the [Openings](/reference/reservations-openings) and [Holds](/reference/reservations-holds) steps to obtain a `hold_id` before calling this endpoint. In addition to the hold ID, you supply the user's contact information and a `unique_id` that identifies the user in your system — Yelp uses this to prevent duplicate bookings.
+
+<Warning>
+  **Partner API — Access disabled by default.** The Reservations API is available only to Yelp partners. Apply for access at [yelp.com/fusion/vip/apply](https://www.yelp.com/fusion/vip/apply). Authenticate with your Yelp Places API Key (`Authorization: Bearer YOUR_API_KEY`).
+</Warning>
+
+## Endpoint
+
+```
+POST https://api.yelp.com/v3/bookings/{business_id}/reservations
+```
+
+## Path Parameters
+
+<ParamField path="business_id" type="string" required>
+  The Yelp business ID of the restaurant to book at.
+</ParamField>
+
+## Request Body
+
+<ParamField body="date" type="string" required>
+  Reservation date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField body="time" type="string" required>
+  Reservation time in `HH:MM` (24-hour) format.
+</ParamField>
+
+<ParamField body="covers" type="integer" required>
+  Party size (number of guests).
+</ParamField>
+
+<ParamField body="hold_id" type="string" required>
+  The hold ID obtained from `POST /v3/bookings/{id}/holds`. Identifies the reserved slot.
+</ParamField>
+
+<ParamField body="first_name" type="string" required>
+  Guest's first name.
+</ParamField>
+
+<ParamField body="last_name" type="string" required>
+  Guest's last name.
+</ParamField>
+
+<ParamField body="phone" type="string" required>
+  Guest's phone number for the reservation confirmation.
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Guest's email address for the reservation confirmation.
+</ParamField>
+
+<ParamField body="unique_id" type="string" required>
+  Your platform's unique identifier for this user. Yelp uses this to enforce the duplicate-booking constraint — the same `unique_id` cannot have two reservations at the same restaurant within a 3-hour window.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  "https://api.yelp.com/v3/bookings/north-india-restaurant-san-francisco/reservations" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date": "2024-08-15",
+    "time": "19:00",
+    "covers": 2,
+    "hold_id": "hold_XyzAbcDef123",
+    "first_name": "Alex",
+    "last_name": "Johnson",
+    "phone": "+14155551234",
+    "email": "alex.johnson@example.com",
+    "unique_id": "user_8675309"
+  }'
+```
+</CodeGroup>
+
+## Example Response
+
+```json
+{
+  "reservation_id": "res_PqrStuVwx987654",
+  "status": "confirmed",
+  "confirmation_url": "https://www.yelp.com/reservations/confirmation/res_PqrStuVwx987654",
+  "date": "2024-08-15",
+  "time": "19:00",
+  "covers": 2,
+  "business_id": "north-india-restaurant-san-francisco"
+}
+```
+
+## Response Fields
+
+<ResponseField name="reservation_id" type="string">
+  Unique Yelp reservation identifier. Store this for future status checks or cancellations.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Reservation status. `confirmed` means the reservation was successfully created.
+</ResponseField>
+
+<ResponseField name="confirmation_url" type="string">
+  URL to the reservation confirmation page on Yelp. You can surface this link to the user.
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Confirmed reservation date.
+</ResponseField>
+
+<ResponseField name="time" type="string">
+  Confirmed reservation time.
+</ResponseField>
+
+<ResponseField name="covers" type="integer">
+  Confirmed party size.
+</ResponseField>
+
+<ResponseField name="business_id" type="string">
+  Yelp business ID of the restaurant.
+</ResponseField>
+
+<Warning>
+  Yelp enforces a **duplicate booking constraint**: the same `unique_id` cannot book more than one reservation at the same restaurant within a 3-hour window. If a duplicate is detected, the request will fail. You cannot edit reservations via the API — to change a booking, cancel it and create a new one.
+</Warning>

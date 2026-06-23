@@ -1,0 +1,254 @@
+---
+title: "Ads API Reference — Manage Yelp Advertising Programs"
+sidebarTitle: "Ads"
+description: "Create, modify, and terminate Yelp advertising programs for businesses. Covers CPC, Branded Profile, Enhanced Profile, and other ad program types via the Partner API."
+---
+
+The Yelp Advertising API lets you programmatically create and manage advertising programs for Yelp business listings. All create/modify/terminate operations are **asynchronous** — each call returns a `job_id` that you then poll for status. Programs include CPC (cost-per-click) campaigns, Branded Profile, Enhanced Profile, and several others.
+
+<Warning>
+  **Partner API — Access disabled by default.** The Ads API is only available to contracted Yelp advertising reseller partners. Contact your Yelp account team to request access. **Authentication uses HTTP Basic Auth** (username:password) over HTTPS — not the standard Fusion API Key.
+</Warning>
+
+<Note>
+  Base URL: `https://partner-api.yelp.com/v1/reseller/`. All requests must use HTTPS. The Ads API requires **encrypted business IDs** — use the [Business Match API](/reference/business-match) to look up IDs for Yelp listings.
+</Note>
+
+---
+
+## POST /v1/reseller/program/create — Create Program
+
+Create a new advertising program for a Yelp business listing.
+
+```
+POST https://partner-api.yelp.com/v1/reseller/program/create
+```
+
+### Query Parameters
+
+<ParamField query="business_id" type="string" required>
+  Encrypted Yelp business ID for the listing you want to advertise.
+</ParamField>
+
+<ParamField query="program_name" type="string" required>
+  The advertising program type. Valid values: `CPC`, `BP` (Branded Profile), `EP` (Enhanced Profile), `RCA` (Remove Competitor Ads), `CTA` (Call To Action), `SLIDESHOW`, `BH` (Business Highlights), `VL` (Verified License), `LOGO`, `PORTFOLIO`.
+</ParamField>
+
+<ParamField query="start" type="string">
+  Optional start date in `YYYY-MM-DD` format. If omitted, the program starts immediately.
+</ParamField>
+
+<ParamField query="end" type="string">
+  Optional end date in `YYYY-MM-DD` format. If omitted, the program runs until terminated via the API.
+</ParamField>
+
+<ParamField query="promotion_code" type="string">
+  Optional promotion code to apply a discount to the program.
+</ParamField>
+
+#### CPC-Specific Parameters
+
+<ParamField query="budget" type="integer" required>
+  Monthly budget in cents (e.g., `20000` = $200.00). Minimum is $25 (2500 cents). Required for CPC programs.
+</ParamField>
+
+<ParamField query="is_autobid" type="boolean" required>
+  Set to `true` to let Yelp optimize bids automatically. Set to `false` to specify a `max_bid`. Required for CPC programs.
+</ParamField>
+
+<ParamField query="max_bid" type="integer">
+  Maximum bid in cents (e.g., `500` = $5.00). Minimum is $0.50 (50 cents). Required when `is_autobid` is `false`.
+</ParamField>
+
+<ParamField query="pacing_method" type="string">
+  `paced` (spread budget evenly throughout the month) or `unpaced` (spend as fast as possible). Default is `paced` when `is_autobid=true`, `unpaced` when using `max_bid`. Contact partner-support@yelp.com before using `unpaced`.
+</ParamField>
+
+<ParamField query="fee_period" type="string">
+  `CALENDAR_MONTH` (budget resets on the 1st of each month) or `ROLLING_MONTH` (resets every 30 days). Default is `CALENDAR_MONTH`.
+</ParamField>
+
+<ParamField query="ad_categories" type="string">
+  Comma-delimited list of category aliases from the business's own category list to scope the CPC campaign.
+</ParamField>
+
+### Example Request — Create CPC Program
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  --user "{username}:{password}" \
+  "https://partner-api.yelp.com/v1/reseller/program/create?business_id=WavvLdfdP6g8aZTtbBQHTw&program_name=CPC&budget=20000&max_bid=500&is_autobid=false&start=2024-01-01&end=2024-01-31"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "job_id": "prvtN-nilb4mUynGGgKuBQ"
+}
+```
+
+<Note>
+  For CPC programs, the business listing **must** have text in the Specialties field and at least one category in order to appear in Yelp search results. Use the Data Ingestion API to set `about_this_business_specialties` if needed.
+</Note>
+
+---
+
+## POST /v1/reseller/program/{program_id}/edit — Modify Program
+
+Modify an existing advertising program.
+
+```
+POST https://partner-api.yelp.com/v1/reseller/program/{program_id}/edit
+```
+
+### Path Parameters
+
+<ParamField path="program_id" type="string" required>
+  The ID of the program to modify.
+</ParamField>
+
+### Query Parameters (edit)
+
+<ParamField query="start" type="string">
+  New start date. Cannot be set to a date in the past or before the current time.
+</ParamField>
+
+<ParamField query="end" type="string">
+  New end date. Cannot be set to a date in the past.
+</ParamField>
+
+<ParamField query="budget" type="integer">
+  Updated monthly budget in cents (CPC only). Cannot be decreased below the amount already spent this period.
+</ParamField>
+
+<ParamField query="max_bid" type="integer">
+  Updated maximum bid in cents (CPC only, when using the max_bid option).
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  --user "{username}:{password}" \
+  "https://partner-api.yelp.com/v1/reseller/program/c6HT44PKCaXqzN_BdgKPCw/edit?budget=25000&max_bid=1000"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "job_id": "yf8sGfL9NNRpHoXmKudBwg"
+}
+```
+
+---
+
+## POST /v1/reseller/program/{program_id}/end — Terminate Program
+
+Immediately end an active advertising program.
+
+```
+POST https://partner-api.yelp.com/v1/reseller/program/{program_id}/end
+```
+
+### Path Parameters
+
+<ParamField path="program_id" type="string" required>
+  The ID of the program to terminate.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  --user "{username}:{password}" \
+  "https://partner-api.yelp.com/v1/reseller/program/c6HT44PKCaXqzN_BdgKPCw/end"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "job_id": "prvtN-nilb4mUynGGgKuBQ"
+}
+```
+
+---
+
+## GET /v1/reseller/status/{job_id} — Get Job Status
+
+Poll for the result of a create, modify, or terminate job.
+
+```
+GET https://partner-api.yelp.com/v1/reseller/status/{job_id}
+```
+
+### Path Parameters
+
+<ParamField path="job_id" type="string" required>
+  The job ID returned by a create, edit, or end request.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  -H "Accept: application/json" \
+  --user "{username}:{password}" \
+  "https://partner-api.yelp.com/v1/reseller/status/prvtN-nilb4mUynGGgKuBQ"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "status": "COMPLETED",
+  "completed_at": "2024-01-01T12:05:00Z",
+  "created_at": "2024-01-01T12:00:00Z",
+  "business_results": [
+    {
+      "status": "COMPLETED",
+      "identifier_type": "BUSINESS",
+      "identifier": "WavvLdfdP6g8aZTtbBQHTw",
+      "update_results": {
+        "program_added": {
+          "program_id": { "status": "COMPLETED", "requested_value": "newProgramId123" },
+          "program_name": { "status": "COMPLETED", "requested_value": "CPC" },
+          "budget": { "status": "COMPLETED", "requested_value": 20000 },
+          "max_bid": { "status": "COMPLETED", "requested_value": 500 },
+          "is_autobid": { "status": "COMPLETED", "requested_value": false }
+        }
+      }
+    }
+  ]
+}
+```
+
+### Response Fields
+
+<ResponseField name="status" type="string">
+  Overall job status: `COMPLETED` or `PROCESSING`.
+</ResponseField>
+
+<ResponseField name="business_results" type="array">
+  Per-business results array.
+  <Expandable title="Business result fields">
+    <ResponseField name="status" type="string">`COMPLETED` or `REJECTED`.</ResponseField>
+    <ResponseField name="identifier" type="string">The Yelp business ID.</ResponseField>
+    <ResponseField name="update_results" type="object">Detailed status for each field updated by the job, including requested values and per-field status.</ResponseField>
+    <ResponseField name="error" type="object">Present only when `status` is `REJECTED`. Contains `code` and `message` fields describing the rejection reason.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Tip>
+  Poll the status endpoint every 30–60 seconds after submitting a job. A `PROCESSING` status means the job is still running. A `REJECTED` status on `business_results` means the business or program has an issue (e.g., business is closed, program conflicts) — inspect the `error` field for details.
+</Tip>

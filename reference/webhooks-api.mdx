@@ -1,0 +1,216 @@
+---
+title: "Webhooks API Reference — Subscribe and Manage Webhooks"
+sidebarTitle: "Webhooks"
+description: "Subscribe to Yelp real-time webhook notifications for leads, phone opt-ins, and other business events. Covers the self-serve Leads webhook API and payload formats."
+---
+
+Yelp webhooks deliver real-time HTTP POST notifications to your endpoint whenever a subscribed event occurs — such as a new lead message, a data ingestion job update, or a consumer phone opt-in. The Leads API uses a **self-serve webhook model** where you register and manage subscriptions via the API yourself. All other webhook types (reviews, verified licenses, etc.) are configured by your Yelp account team.
+
+<Warning>
+  **Partner API — Access disabled by default.** Webhooks are reserved for official Yelp advertising, listing management, and Yelp Insights partners. Contact your Yelp account team to get access. Leads API webhooks use OAuth 2.0 tokens; all other webhook types require your Yelp account team to configure your webhook URL manually.
+</Warning>
+
+<Note>
+  Your webhook endpoint must respond to all POST requests with a `2XX` HTTP status code within **10 seconds**. If Yelp receives a non-2XX response or the request times out, it will retry for up to 24 hours before discarding the message.
+</Note>
+
+---
+
+## POST /v3/webhooks — Subscribe to Webhooks
+
+Register a webhook endpoint to receive real-time notifications for Leads events. This is the self-serve endpoint for the Leads API.
+
+```
+POST https://api.yelp.com/v3/webhooks
+```
+
+### Request Body
+
+<ParamField body="webhook_url" type="string" required>
+  Your HTTPS endpoint that will receive webhook POST payloads. Must be HTTPS. Must not contain query parameters — encode extra context as path parameters instead.
+</ParamField>
+
+<ParamField body="webhook_type" type="string" required>
+  The type of webhook to subscribe to. Use `leads` for Leads API notifications.
+</ParamField>
+
+<ParamField body="restricted_business_ids" type="array">
+  Optional list of Yelp business IDs to restrict notifications to. If omitted, you receive notifications for **all businesses** the authenticated user has access to.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  "https://api.yelp.com/v3/webhooks" \
+  -H "Authorization: Bearer YOUR_OAUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "webhook_url": "https://your-platform.example.com/yelp/webhooks",
+    "webhook_type": "leads",
+    "restricted_business_ids": ["WavvLdfdP6g8aZTtbBQHTw"]
+  }'
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "webhook_id": "wh_AbCdEfGhIjKlMnOp12345",
+  "webhook_url": "https://your-platform.example.com/yelp/webhooks",
+  "webhook_type": "leads",
+  "expiration_date": "2024-08-29T12:00:00+00:00"
+}
+```
+
+### Response Fields
+
+<ResponseField name="webhook_id" type="string">
+  Unique identifier for this webhook subscription. Use it to unsubscribe.
+</ResponseField>
+<ResponseField name="webhook_url" type="string">
+  The registered notification URL.
+</ResponseField>
+<ResponseField name="webhook_type" type="string">
+  The event type this subscription covers.
+</ResponseField>
+<ResponseField name="expiration_date" type="string">
+  ISO 8601 timestamp when this subscription expires. Subscriptions expire after **14 days**.
+</ResponseField>
+
+<Warning>
+  Webhook subscriptions expire after **14 days**. You must unsubscribe and resubscribe at least one hour before the expiration date to avoid missing notifications. Automate this renewal process in your integration.
+</Warning>
+
+---
+
+## DELETE /v3/webhooks/{webhook_id} — Unsubscribe from Webhooks
+
+Remove an existing webhook subscription.
+
+```
+DELETE https://api.yelp.com/v3/webhooks/{webhook_id}
+```
+
+### Path Parameters
+
+<ParamField path="webhook_id" type="string" required>
+  The webhook subscription ID returned when you subscribed.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE \
+  "https://api.yelp.com/v3/webhooks/wh_AbCdEfGhIjKlMnOp12345" \
+  -H "Authorization: Bearer YOUR_OAUTH_TOKEN"
+```
+</CodeGroup>
+
+---
+
+## Webhook Event Types
+
+| Event Type | When It Fires |
+|------------|--------------|
+| `NEW_EVENT` | A new lead is created, or a new message/interaction is added to an existing lead. |
+| `CONSUMER_PHONE_NUMBER_OPT_IN_EVENT` | A consumer opts in to receiving phone calls for a lead. |
+| `CONSUMER_PHONE_NUMBER_OPT_OUT_EVENT` | A consumer opts out of receiving phone calls for a lead. |
+
+---
+
+## Webhook Payload Formats
+
+### NEW_EVENT Payload
+
+Sent when a new lead is created or a new message is added to an existing lead.
+
+```json
+{
+  "time": "2022-06-09T09:41:14+00:00",
+  "object": "business",
+  "data": {
+    "id": "SoVHhx7Hel_XX0DKCLp72Q",
+    "updates": [
+      {
+        "event_type": "NEW_EVENT",
+        "event_id": "IsKxQAYZNqCjvRRmNoiCUw",
+        "lead_id": "TbvEUYEi02cmSBmqCjQbkg",
+        "interaction_time": "2022-06-09T09:41:13+00:00"
+      }
+    ]
+  }
+}
+```
+
+<Note>
+  Webhook payloads do **not** include full event content (message text, attachments). After receiving a `NEW_EVENT` notification, call `GET /v3/leads/{lead_id}` and `GET /v3/leads/{lead_id}/events` to retrieve the complete lead and message details.
+</Note>
+
+### Phone Opt-In Payload
+
+Sent when a consumer opts into phone calls for a lead.
+
+```json
+{
+  "time": "2022-06-09T10:00:00+00:00",
+  "object": "business",
+  "data": {
+    "id": "SoVHhx7Hel_XX0DKCLp72Q",
+    "updates": [
+      {
+        "event_type": "CONSUMER_PHONE_NUMBER_OPT_IN_EVENT",
+        "lead_id": "TbvEUYEi02cmSBmqCjQbkg",
+        "interaction_time": "2022-06-09T10:00:00+00:00"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Payload Field Reference
+
+<ResponseField name="time" type="string">
+  ISO 8601 timestamp when the webhook notification was generated.
+</ResponseField>
+
+<ResponseField name="object" type="string">
+  Object type associated with the notification. Currently always `"business"`.
+</ResponseField>
+
+<ResponseField name="data.id" type="string">
+  Yelp business ID that the notification relates to.
+</ResponseField>
+
+<ResponseField name="data.updates" type="array">
+  Array of update objects describing what changed.
+  <Expandable title="Update fields">
+    <ResponseField name="event_type" type="string">
+      Type of event: `NEW_EVENT`, `CONSUMER_PHONE_NUMBER_OPT_IN_EVENT`, or `CONSUMER_PHONE_NUMBER_OPT_OUT_EVENT`.
+    </ResponseField>
+    <ResponseField name="event_id" type="string">
+      Unique ID of the specific event (for `NEW_EVENT` only).
+    </ResponseField>
+    <ResponseField name="lead_id" type="string">
+      Yelp lead ID associated with this notification.
+    </ResponseField>
+    <ResponseField name="interaction_time" type="string">
+      ISO 8601 timestamp of when the interaction occurred on Yelp.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## Retries and Ordering
+
+Yelp retries failed deliveries at increasing intervals for up to 24 hours. After that, the message is discarded. Because of retries, **messages may arrive out of order** — use the `interaction_time` field to determine chronological order and de-duplicate repeated deliveries.
+
+<Tip>
+  Use the `GET /v3/businesses/{business_id}/lead_ids` endpoint periodically to reconcile leads in case webhooks were missed during downtime.
+</Tip>

@@ -1,0 +1,202 @@
+---
+title: "Reporting API Reference — Yelp Business Metrics Endpoints"
+sidebarTitle: "Reporting"
+description: "Request and retrieve daily or monthly business and advertiser metrics for a set of Yelp businesses. Supports up to 500 business IDs per report request."
+---
+
+The Yelp Reporting API lets you retrieve business performance metrics and CPC advertiser metrics for a specified set of businesses over a custom date range. The flow is asynchronous: you first **POST** a report request and receive a `report_id`, then **GET** that report ID to retrieve results once processing is complete. Daily reports cover up to 89 days back; monthly reports cover up to 2 months back. Most reports take about 30 minutes to process.
+
+<Warning>
+  **Partner API — Access disabled by default.** The Reporting API is available only to Yelp advertising, listing management, and knowledge partners. Contact your Yelp representative to enable access. Your Yelp Fusion client must be separately enabled for the Reporting API.
+</Warning>
+
+<Note>
+  The current API version is **v3**. All endpoints are at `https://api.yelp.com/v3/reporting/`. Authentication uses your Yelp Fusion API Key (`Authorization: Bearer YOUR_API_KEY`).
+</Note>
+
+---
+
+## POST /v3/reporting/businesses/daily — Request Daily Report
+
+Submit a request for a daily metrics report. Returns a `report_id` for polling.
+
+```
+POST https://api.yelp.com/v3/reporting/businesses/daily
+```
+
+### Request Body
+
+<ParamField body="business_ids" type="array" required>
+  Array of encrypted Yelp business ID strings to include in the report. Maximum **500 IDs per request**. Use the [Business Match API](/reference/business-match) to obtain encrypted business IDs.
+</ParamField>
+
+<ParamField body="start_date" type="string" required>
+  Start date of the reporting period in ISO 8601 format (`YYYY-MM-DD`). Daily metrics can be requested up to 89 days ago.
+</ParamField>
+
+<ParamField body="end_date" type="string" required>
+  End date of the reporting period in ISO 8601 format (`YYYY-MM-DD`). Must be after `start_date`.
+</ParamField>
+
+<ParamField body="metrics" type="array" required>
+  List of metric identifiers to include. See the Business Metrics and Advertiser Metrics tables below for valid values.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  "https://api.yelp.com/v3/reporting/businesses/daily" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "business_ids": ["WavvLdfdP6g8aZTtbBQHTw", "anotherBusinessId123"],
+    "start_date": "2024-06-01",
+    "end_date": "2024-06-07",
+    "metrics": ["num_total_page_views", "num_calls", "billed_clicks", "ad_cost"]
+  }'
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "report_id": "_WavvLdfdP6g8aZTtbBQHTw"
+}
+```
+
+---
+
+## POST /v3/reporting/businesses/monthly — Request Monthly Report
+
+Submit a request for a monthly metrics report. Same structure as the daily request.
+
+```
+POST https://api.yelp.com/v3/reporting/businesses/monthly
+```
+
+Monthly metrics can be requested up to **2 months ago**. The request body and response format are identical to the daily endpoint above.
+
+---
+
+## GET /v3/reporting/businesses/daily/{report_id} — Get Daily Report
+
+Retrieve the results of a previously requested daily report.
+
+```
+GET https://api.yelp.com/v3/reporting/businesses/daily/{report_id}
+```
+
+### Path Parameters
+
+<ParamField path="report_id" type="string" required>
+  The report ID returned by the POST daily request.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/reporting/businesses/daily/_WavvLdfdP6g8aZTtbBQHTw" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "report_id": "_WavvLdfdP6g8aZTtbBQHTw",
+  "status": "COMPLETE",
+  "businesses": [
+    {
+      "business_id": "WavvLdfdP6g8aZTtbBQHTw",
+      "metrics": {
+        "num_total_page_views": [120, 98, 134, 110, 145, 99, 88],
+        "num_calls": [5, 3, 7, 4, 9, 2, 6],
+        "billed_clicks": [12, 8, 15, 10, 18, 7, 11],
+        "ad_cost": [2400, 1600, 3000, 2000, 3600, 1400, 2200]
+      }
+    }
+  ]
+}
+```
+
+### Response Fields
+
+<ResponseField name="report_id" type="string">
+  The unique report identifier.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Report processing status. Values: `PROCESSING` (still running, retry later) or `COMPLETE` (data is ready).
+</ResponseField>
+
+<ResponseField name="businesses" type="array">
+  Array of per-business metric results. Only present when `status` is `COMPLETE`.
+  <Expandable title="Business result fields">
+    <ResponseField name="business_id" type="string">Encrypted Yelp business ID.</ResponseField>
+    <ResponseField name="metrics" type="object">
+      Key-value map where each key is a requested metric name and each value is an array of daily (or monthly) values ordered chronologically across the requested date range.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## GET /v3/reporting/businesses/monthly/{report_id} — Get Monthly Report
+
+Retrieve the results of a previously requested monthly report. Identical structure to the daily GET endpoint.
+
+```
+GET https://api.yelp.com/v3/reporting/businesses/monthly/{report_id}
+```
+
+---
+
+## Available Metrics
+
+### Business Metrics
+
+Business metrics count total user interactions with a business listing (organic + ad-driven combined).
+
+| Metric | Display Name |
+|--------|-------------|
+| `num_total_page_views` | Total User Views |
+| `num_calls` | Mobile Calls |
+| `num_directions_and_map_views` | Directions & Map Views |
+| `url_clicks` | Clicks to Website |
+| `num_check_ins` | Mobile Check-ins |
+| `num_user_photos` | User Uploaded Photos |
+| `num_bookmarks` | Yelp Bookmarks |
+| `num_desktop_cta_clicks` | Desktop CTA Clicks |
+| `num_mobile_cta_clicks` | Mobile CTA Clicks |
+| `num_messages_to_business` | Request a Quote — Messages |
+| `num_desktop_search_appearances` | Desktop Appearances in Search |
+| `num_mobile_search_appearances` | Mobile Appearances in Search |
+| `rating` | Average Rating |
+| `reviews` | Review Count |
+| `total_leads` | Total # of Leads |
+
+### Advertiser Metrics
+
+Advertiser metrics report CPC program performance and ad-attributed interactions.
+
+| Metric | Display Name |
+|--------|-------------|
+| `billed_impressions` | Billed Ad Impressions |
+| `billed_clicks` | Billed Ad Clicks |
+| `ad_cost` | Ad Cost (in cents) |
+| `ad_driven_calls` | Ad Driven Mobile Calls |
+| `ad_driven_url_clicks` | Ad Driven Clicks to Website |
+| `ad_driven_directions_and_map_views` | Ad Driven Directions & Map Views |
+| `ad_click_through_rate` | Ad Click Through Rate |
+| `average_cost_per_click` | Average Cost Per Click |
+| `ad_driven_total_leads` | Total # of Ad Driven Leads |
+
+<Tip>
+  Poll the GET report endpoint every 5–10 minutes after submitting a POST request. Reports typically complete within 30 minutes. Yelp metrics are batch-processed once every 24 hours, so report data will not change after it becomes available.
+</Tip>

@@ -1,0 +1,157 @@
+---
+title: "Yelp Places API Plans and Pricing Tiers"
+sidebarTitle: "Plans"
+description: "Compare Yelp Places API tiers—Base, Enhanced, and Premium—including attribute counts, call limits, trial terms, and enterprise options."
+---
+
+The Yelp Places API is available in three tiers—**Base**, **Enhanced**, and **Premium**—each unlocking a progressively richer set of business attributes, photos, and review data. You can start with a free 30-day trial to evaluate the API before committing to a paid plan, and enterprise options are available for organizations that need very high call volumes. This page explains what each tier includes, the call limits that apply, and how to move between plans.
+
+---
+
+## Plan Overview
+
+<CardGroup cols={3}>
+  <Card title="Base" icon="layer-group">
+    **15 attributes** — Core business essentials including name, address, phone, hours, rating, review count, and Yelp action URLs. Ideal for lightweight directory integrations.
+  </Card>
+  <Card title="Enhanced" icon="circle-check">
+    **23 attributes** — Everything in Base plus review excerpts (up to 3), top photos (up to 3), price level, business website URL, service area, and Request-a-Quote metrics.
+  </Card>
+  <Card title="Premium" icon="star">
+    **66 attributes** — Everything in Enhanced plus Review Highlights, extended photos (up to 12), photo captions, business history, all customer-experience attributes, payment methods, and early Fusion AI API access (20 daily calls).
+  </Card>
+</CardGroup>
+
+---
+
+## API Call Limits
+
+| | Trial | Paid (Enhanced / Premium) | Enterprise |
+|---|---|---|---|
+| **Included calls** | 5,000 total | 30,000 / month | Custom |
+| **Daily limit** | Shared from 5,000 | 5,000 / day | Custom (contact sales) |
+| **Trial period** | 30 days | — | — |
+| **Overage billing** | Not available | Per 1,000 calls beyond 30k/month | Negotiated |
+| **Commercial use** | ❌ Evaluation only | ✔ | ✔ |
+
+<Warning>
+  The Trial Plan is **strictly for evaluation purposes and not for commercial deployment**. Any production or commercial use requires a paid plan.
+</Warning>
+
+<Note>
+  If you need to raise your daily quota above 5,000 calls, [book a meeting with the sales team](https://business.yelp.com/data/#form) to discuss your requirements. For more than **150,000 monthly API calls**, submit the [Enterprise form](https://fusion.yelp.com/enterprise/apply/).
+</Note>
+
+---
+
+## Full Attribute Comparison
+
+The table below shows every attribute and which plan tier makes it available.
+
+### Essentials
+
+| Attribute | Premium | Enhanced | Base |
+|---|:---:|:---:|:---:|
+| Business name | ✔ | ✔ | ✔ |
+| Business address | ✔ | ✔ | ✔ |
+| Category / categories | ✔ | ✔ | ✔ |
+| Phone number | ✔ | ✔ | ✔ |
+| Hours of operation | ✔ | ✔ | ✔ |
+| Average star rating | ✔ | ✔ | ✔ |
+| Review count | ✔ | ✔ | ✔ |
+| Closure status | ✔ | ✔ | ✔ |
+| Yelp profile URL | ✔ | ✔ | ✔ |
+| Business profile photo | ✔ | ✔ | ✔ |
+| Yelp Reservations | ✔ | ✔ | ✔ |
+| Yelp Waitlist | ✔ | ✔ | ✔ |
+| Yelp Request a Quote | ✔ | ✔ | ✔ |
+| Yelp food order | ✔ | ✔ | ✔ |
+| Yelp menu URL | ✔ | ✔ | ✔ |
+| Hot & New status | ✔ | ✔ | |
+| Review excerpts (up to 3 per business) | ✔ | ✔ | |
+| Top photos (up to 3 per business) | ✔ | ✔ | |
+| Price level | ✔ | ✔ | |
+| Business website URL | ✔ | ✔ | |
+| RAQ response rate | ✔ | ✔ | |
+| RAQ response time | ✔ | ✔ | |
+| Service area | ✔ | ✔ | |
+
+### Reviews & Photos
+
+| Attribute | Premium | Enhanced | Base |
+|---|:---:|:---:|:---:|
+| Review Highlights endpoint | ✔ | | |
+| Review excerpts (up to 7 per business) | ✔ | | |
+| Additional photos (up to 12 per business) | ✔ | | |
+| Photo captions | ✔ | | |
+| Photo labels | ✔ | | |
+| Photo count | ✔ | | |
+
+### About the Business
+
+| Attribute | Premium | Enhanced | Base |
+|---|:---:|:---:|:---:|
+| Business history | ✔ | | |
+| Business role | ✔ | | |
+| Business specialities | ✔ | | |
+| Business summary | ✔ | | |
+| Owner's name | ✔ | | |
+| Owner photo thumbnail | ✔ | | |
+| Recommendations | ✔ | | |
+| Year established | ✔ | | |
+
+### Customer Experience
+
+| Attribute | Premium | Enhanced | Base |
+|---|:---:|:---:|:---:|
+| Ambience | ✔ | | |
+| Attire | ✔ | | |
+| Best nights | ✔ | | |
+| Dogs allowed | ✔ | | |
+| Gluten-free options | ✔ | | |
+| Good for dancing | ✔ | | |
+| Good for groups | ✔ | | |
+| Good for kids | ✔ | | |
+| Good for working | ✔ | | |
+| Good for meal type | ✔ | | |
+| Noise level | ✔ | | |
+| Outdoor seating | ✔ | | |
+| Vegan options | ✔ | | |
+| Vegetarian options | ✔ | | |
+| Waiter service | ✔ | | |
+
+### Additional Features
+
+| Attribute | Premium | Enhanced | Base |
+|---|:---:|:---:|:---:|
+| Accepts Apple Pay | ✔ | | |
+| Accepts credit cards | ✔ | | |
+| Accepts Google Pay | ✔ | | |
+| Alcohol served | ✔ | | |
+| Drive-Thru | ✔ | | |
+| Happy hour special | ✔ | | |
+| Has TV | ✔ | | |
+| Offers catering | ✔ | | |
+| Offers delivery | ✔ | | |
+| Offers reservations | ✔ | | |
+| Offers takeout | ✔ | | |
+| Parking options | ✔ | | |
+| Pool table | ✔ | | |
+| Smoking | ✔ | | |
+| WiFi | ✔ | | |
+
+---
+
+## Fusion AI API Access
+
+<Note>
+  **Premium plan** subscribers receive early access to the [Fusion AI API](https://www.yelp.com/developers/fusion-ai/chat) — a conversational AI endpoint powered by Yelp's local business data. The included quota is **20 daily AI API calls**. To explore this feature, see the [Fusion AI API reference](/reference/v2_ai_chat).
+</Note>
+
+---
+
+## Getting Started
+
+- **Start a trial:** Visit the [sign-up page](https://business.yelp.com/data/products/places-api/) to activate your free 30-day trial.
+- **Upgrade to a paid plan:** Go to the [payment page](https://www.yelp.com/developers/v3/payment) to select Base, Enhanced, or Premium.
+- **Enterprise (150k+ monthly calls):** Submit the [Enterprise form](https://fusion.yelp.com/enterprise/apply/) or [book a meeting with sales](https://business.yelp.com/data/#form).
