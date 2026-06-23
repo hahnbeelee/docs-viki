@@ -67,7 +67,7 @@ Authorization: Bearer YOUR_API_KEY
 </ParamField>
 
 <ParamField query="offset" type="integer">
-  Offset into the total result set for pagination. For example, to get results 21–40, set `offset=20`. Combined with `limit`, the maximum reachable offset is 240 results total.
+  Offset into the total result set for pagination. For example, with `limit=50`, set `offset=51` to get results 51–100. Combined with `limit`, the maximum reachable total is **240 results** per unique search query.
 </ParamField>
 
 <ParamField query="sort_by" type="string">
@@ -83,7 +83,16 @@ Authorization: Bearer YOUR_API_KEY
 </ParamField>
 
 <ParamField query="attributes" type="string">
-  A comma-separated list of business attributes to filter on. Supported values include `hot_and_new`, `request_a_quote`, `reservation`, `waitlist_reservation`, `cashback`, `deals`, `gender_neutral_restrooms`, `open_to_all`, `wheelchair_accessible`.
+  A comma-separated list of business attributes to filter on. Standard values:
+  - `hot_and_new` — popular businesses that recently joined Yelp
+  - `request_a_quote` — businesses that actively reply to Request a Quote inquiries
+  - `reservation` — businesses with Yelp Reservations enabled
+  - `waitlist_reservation` — businesses with Yelp Waitlist enabled
+  - `gender_neutral_restrooms` — businesses with gender-neutral restrooms
+  - `open_to_all` — businesses designated Open To All
+  - `wheelchair_accessible` — wheelchair-accessible businesses
+
+  Additional Premium Search Filters (requires a Premium plan) include `accepts_credit_cards`, various `ambience_*` values, `dogs_allowed`, `happy_hour`, and more.
 </ParamField>
 
 <Note>
@@ -248,5 +257,5 @@ console.log(response.data);
 </ResponseField>
 
 <Tip>
-  To implement infinite-scroll or "load more" pagination, increment the `offset` by your `limit` value on each subsequent request until `offset >= total` or you reach 240.
+  To paginate, increment `offset` by your `limit` value on each subsequent request. For example, with `limit=50`: first request uses `offset=0`, next uses `offset=51`, then `offset=101`, up to a maximum of 240 total results per unique search query.
 </Tip>

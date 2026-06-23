@@ -79,6 +79,31 @@ POST https://api.yelp.com/v3/reporting/businesses/monthly
 
 Monthly metrics can be requested up to **2 months ago**. The request body and response format are identical to the daily endpoint above.
 
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  "https://api.yelp.com/v3/reporting/businesses/monthly" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "business_ids": ["WavvLdfdP6g8aZTtbBQHTw", "anotherBusinessId123"],
+    "start_date": "2024-05-01",
+    "end_date": "2024-06-30",
+    "metrics": ["num_total_page_views", "num_calls", "billed_clicks", "ad_cost"]
+  }'
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "report_id": "_WavvLdfdP6g8aZTtbBQHTw_monthly"
+}
+```
+
 ---
 
 ## GET /v3/reporting/businesses/daily/{report_id} — Get Daily Report
@@ -153,6 +178,42 @@ Retrieve the results of a previously requested monthly report. Identical structu
 
 ```
 GET https://api.yelp.com/v3/reporting/businesses/monthly/{report_id}
+```
+
+### Path Parameters
+
+<ParamField path="report_id" type="string" required>
+  The report ID returned by the POST monthly request.
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/reporting/businesses/monthly/_WavvLdfdP6g8aZTtbBQHTw_monthly" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "report_id": "_WavvLdfdP6g8aZTtbBQHTw_monthly",
+  "status": "COMPLETE",
+  "businesses": [
+    {
+      "business_id": "WavvLdfdP6g8aZTtbBQHTw",
+      "metrics": {
+        "num_total_page_views": [3540, 3120],
+        "num_calls": [88, 72],
+        "billed_clicks": [310, 275],
+        "ad_cost": [62000, 55000]
+      }
+    }
+  ]
+}
 ```
 
 ---

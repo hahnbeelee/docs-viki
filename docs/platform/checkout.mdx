@@ -66,7 +66,7 @@ Yelp guarantees **at-least-once delivery**, so your handler must be idempotent â
 
 - Must be **HTTPS**
 - Must contain **no query parameters** (e.g., use `/food/notification` not `/notification?type=food`)
-- Must respond with **HTTP 200** within 5 seconds (Yelp retries up to 3 times on non-200 responses)
+- Must respond with **HTTP 200** within 10 seconds (Yelp retries up to 3 times on non-200 responses)
 
 ### Notification events
 

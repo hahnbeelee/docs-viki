@@ -1,5 +1,5 @@
 ---
-title: "GET /v3/businesses/{id}/review_highlights — Review Highlights"
+title: "GET /v3/businesses/{id}/review_highlights — Highlights"
 sidebarTitle: "Review Highlights"
 description: "Retrieve AI-curated review highlights for a Yelp business — key phrases mentioned frequently by reviewers alongside supporting excerpts."
 ---
@@ -28,6 +28,20 @@ Authorization: Bearer YOUR_API_KEY
 
 <ParamField path="id" type="string" required>
   The Yelp business ID or alias for the business whose review highlights you want to retrieve. You can obtain this from the [Business Search](/reference/business-search), [Business Details](/reference/business-details), or [Business Match](/reference/business-match) endpoints.
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="count" type="integer">
+  Number of review highlights to return per business. Defaults to **3**; maximum is **5**.
+</ParamField>
+
+<ParamField query="locale" type="string">
+  Locale code to return highlights in a specific language, for example `"en_US"` or `"fr_FR"`. Defaults to `"en_US"`.
+</ParamField>
+
+<ParamField query="device_platform" type="string">
+  Determines the platform used for generating the `mobile_link` in the response. Accepted values: `android`, `ios`, `mobile-generic`.
 </ParamField>
 
 ## Example Request

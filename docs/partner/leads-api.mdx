@@ -1,5 +1,5 @@
 ---
-title: "Receive and Respond to Yelp Request-a-Quote Leads"
+title: "Handle Yelp Request-a-Quote Leads with the Leads API"
 sidebarTitle: "Leads API"
 description: "Ingest, read, and reply to Yelp Request-a-Quote leads in real time using OAuth 2.0, webhooks, and the Leads API's read and write endpoints."
 ---
@@ -190,8 +190,9 @@ All Leads API endpoints have a default rate limit of **5 requests per second per
   <Accordion title="Consumer Phone Sharing">
     When enabled for your account, the `GET /v3/leads/{id}` response can include an unmasked consumer phone number in the `phone_number` field. This happens when the consumer types a phone number in the chat.
 
-    - If the consumer has already **opted in** to receiving calls: the real phone number is returned directly in `phone_number`.
-    - If the consumer has **not yet opted in** but typed a phone number: you receive a `CONSUMER_PHONE_NUMBER_AVAILABLE_EVENT` webhook, and `phone_number` is populated in the Get Lead response.
+    - If the consumer has already **opted in** to receiving calls: the real phone number is returned directly in `phone_number`. No `CONSUMER_PHONE_NUMBER_AVAILABLE_EVENT` webhook is sent in this case (the number is already accessible via the Get Lead endpoint).
+    - If the consumer has **not yet opted in** but types a phone number in the chat: you receive a `CONSUMER_PHONE_NUMBER_AVAILABLE_EVENT` webhook, and `phone_number` is populated in the Get Lead response.
+    - If the consumer subsequently completes the opt-in process: you receive a `CONSUMER_PHONE_NUMBER_OPT_IN_EVENT` webhook.
 
     This feature must be explicitly enabled by Yelp for your OAuth client.
   </Accordion>
@@ -202,7 +203,8 @@ All Leads API endpoints have a default rate limit of **5 requests per second per
 | Event Type | When It Fires |
 |---|---|
 | `NEW_EVENT` | A new lead was created, or a new message was added to an existing lead |
-| `CONSUMER_PHONE_NUMBER_OPT_IN_EVENT` | The consumer opted in to receiving phone calls |
+| `CONSUMER_PHONE_NUMBER_AVAILABLE_EVENT` | The consumer typed a phone number in the chat (but has not yet completed opt-in). Fires only if consumer phone sharing is enabled for your account. |
+| `CONSUMER_PHONE_NUMBER_OPT_IN_EVENT` | The consumer completed the opt-in process to receive phone calls |
 | `CONSUMER_PHONE_NUMBER_OPT_OUT_EVENT` | The consumer opted out of receiving phone calls |
 
 ## Error Handling

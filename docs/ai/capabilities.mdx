@@ -1,5 +1,5 @@
 ---
-title: "What the Yelp AI API Can and Cannot Do"
+title: "Yelp AI API: Supported Capabilities and Limitations"
 sidebarTitle: "Capabilities"
 description: "A complete reference of supported query types — business search, Q&A, comparisons, and reservations — plus current limitations to plan around."
 ---
@@ -148,13 +148,13 @@ The API can process natural language reservation requests and return available b
 }
 ```
 
-Two business attributes are particularly relevant for reservation responses:
+Two fields are particularly relevant for reservation responses:
 
 | Field | Description |
 |---|---|
 | `attributes.RestaurantsReservations` | `true` if the restaurant accepts reservations |
-| `attributes.reservation_availability` | Live reservation slots from Yelp Guest Manager |
-| `attributes.accepts_reservations_through_yelp` | `true` if the restaurant can be booked directly through Yelp |
+| `contextual_info.accepts_reservations_through_yelp` | `true` if the restaurant can be booked directly through Yelp |
+| `contextual_info.reservation_availability` | Available booking slots returned from Yelp Guest Manager (may be `null` if no availability or integration is inactive) |
 </Accordion>
 
 ## Response `types` Reference
@@ -169,7 +169,7 @@ The `types` array in every response tells you how to handle the data:
     The response answers a question about one or more known businesses. `contextual_info.business_hours`, `contextual_info.review_snippets`, and `contextual_info.summary` are populated based on what was asked.
   </Tab>
   <Tab title="reservation">
-    The response relates to a restaurant reservation request. Look for `attributes.RestaurantsReservations` and `attributes.accepts_reservations_through_yelp` in the business entities to determine booking eligibility.
+    The response relates to a restaurant reservation request. Look for `attributes.RestaurantsReservations` to confirm the restaurant accepts reservations, and `contextual_info.accepts_reservations_through_yelp` to confirm direct Yelp booking is available.
   </Tab>
 </Tabs>
 

@@ -1,7 +1,7 @@
 ---
 title: "POST /v3/reservations/{id}/cancel — Cancel a Reservation"
 sidebarTitle: "Cancel Reservation"
-description: "Cancel a confirmed Yelp reservation by reservation ID, or check the current status of an existing booking. Reservation editing is not supported via the API."
+description: "Cancel a confirmed Yelp reservation by ID or check a booking's current status. Editing is not supported via the API — cancel and rebook to make changes."
 ---
 
 Once a reservation is confirmed, you can use this endpoint to cancel it on behalf of the user. You can also check the current status of any booking using the companion status endpoint. Keep in mind that the Reservations API does not support editing bookings — if a user needs to change their reservation details, you must cancel the existing booking and create a new one.
@@ -23,7 +23,7 @@ POST https://api.yelp.com/v3/reservations/{reservation_id}/cancel
 ### Path Parameters
 
 <ParamField path="reservation_id" type="string" required>
-  The Yelp reservation ID returned when the booking was created via `POST /v3/bookings/{id}/reservations`.
+  The Yelp reservation ID returned when the booking was created via `POST /v3/bookings/{business_id}/reservations`.
 </ParamField>
 
 ### Example Request

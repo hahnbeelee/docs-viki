@@ -1,7 +1,7 @@
 ---
-title: "POST /v3/bookings/{id}/holds — Hold a Reservation Slot"
+title: "POST /v3/bookings/{business_id}/holds — Place a Hold"
 sidebarTitle: "Holds"
-description: "Place a temporary hold on a reservation time slot to prevent it from being taken while the user enters their booking details. Returns a hold_id for the reservation step."
+description: "Place a temporary hold on a Yelp reservation slot while the user fills in booking details. Prevents the slot being taken and returns a hold_id for booking."
 ---
 
 The Holds endpoint lets you reserve a specific time slot while the end user fills in their personal reservation details (name, phone, email). Placing a hold prevents other users from booking the same slot during that window. Once you have a `hold_id`, you pass it to the [Book Reservation endpoint](/reference/reservations-book) to complete the booking.
@@ -37,7 +37,7 @@ POST https://api.yelp.com/v3/bookings/{business_id}/holds
 </ParamField>
 
 <ParamField body="hold_token" type="string" required>
-  The `hold_token` value returned for the specific opening slot from `GET /v3/bookings/{id}/openings`. This identifies the exact slot you want to hold.
+  The `hold_token` value returned for the specific opening slot from `GET /v3/bookings/{business_id}/openings`. This identifies the exact slot you want to hold.
 </ParamField>
 
 ## Example Request

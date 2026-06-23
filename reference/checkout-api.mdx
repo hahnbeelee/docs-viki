@@ -1,7 +1,7 @@
 ---
-title: "Checkout API Reference — Yelp Order Management"
+title: "Checkout API Reference — Yelp Platform Order Management"
 sidebarTitle: "Checkout"
-description: "Receive, update, and cancel Yelp platform orders for food delivery, bookings, reservations, and more. Covers the notification payload format and order status lifecycle."
+description: "Receive, update, and cancel Yelp platform orders for food, bookings, and reservations. Covers order status codes, notification payloads, and service types."
 ---
 
 The Yelp Checkout API lets you manage orders that users initiate on the Yelp website or app and fulfil through your platform. The integration is event-driven: Yelp POSTs `OrderStatusChangeNotification` payloads to your `notification_url` whenever an order status changes, and you update or cancel orders by calling back into Yelp's API. Orders support multiple service types — food delivery, bookings, hotel reservations, restaurant reservations, goods, and medical appointments.
@@ -24,9 +24,12 @@ Orders flow through the following states:
 |-------------|-------------|
 | `pending_user_submit` | User is entering billing/required information and has not confirmed yet. |
 | `charge_pending` | Yelp is processing the user's payment. |
+| `update_pending` | Yelp is processing a partner `/update` call. |
+| `cancel_pending` | Yelp is processing a partner `/cancel` call. |
 | `ready_for_fulfillment` | Order is confirmed. Your platform should begin fulfillment. |
 | `cancelled` | Order was cancelled by your platform. |
 | `cancelled_by_user` | Order was cancelled by the user. |
+| `cancel_by_user_pending` | Yelp is processing a cancel-by-user request. |
 | `cancelled_by_yelp` | Order was cancelled by Yelp (e.g., inactivity, security). |
 
 ---
@@ -154,6 +157,7 @@ You specify a `notification_url` during order creation. Yelp sends a POST reques
   | `hotel_reservation` | Hotel room reservations. |
   | `restaurant_reservation` | Restaurant table reservations. |
   | `goods` | Physical non-food item orders. |
+  | `club_service` | Club service orders (table booking and bottles). |
   | `medical_compliant` | Medical appointment reservations (e.g., dentist, doctor). |
 </ResponseField>
 

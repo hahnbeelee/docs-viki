@@ -1,10 +1,10 @@
 ---
 title: "GET /v3/businesses/{id}/reviews — Get Business Reviews"
 sidebarTitle: "Reviews"
-description: "Retrieve review excerpts for a Yelp business. Returns up to 3 excerpts on Base/Enhanced plans and up to 7 on Premium, with reviewer info and ratings."
+description: "Retrieve review excerpts for a Yelp business. Returns up to 50 excerpts (~160 chars each) with star ratings, reviewer info, and links to full reviews."
 ---
 
-The Reviews endpoint returns a list of review excerpts for a specific Yelp business. Each review includes a short text snippet of approximately 160 characters, the star rating, a link to the full review on Yelp, and basic information about the reviewer. You can look up reviews by Yelp business ID or alias.
+The Reviews endpoint returns a list of review excerpts for a specific Yelp business. Each review includes a short text snippet of approximately 160 characters, the star rating, a link to the full review on Yelp, and basic information about the reviewer. You can look up reviews by Yelp business ID or alias. Access requires an **Enhanced or Premium plan** — review excerpts are not available on the Base plan.
 
 ## Endpoint
 
@@ -32,23 +32,30 @@ Authorization: Bearer YOUR_API_KEY
   Locale code to filter reviews by language, for example `"en_US"` or `"fr_FR"`. Defaults to `"en_US"`.
 </ParamField>
 
+<ParamField query="offset" type="integer">
+  Offset into the result set for pagination. Defaults to `0`.
+</ParamField>
+
 <ParamField query="limit" type="integer">
-  Maximum number of review excerpts to return. Limits vary by plan:
-  - **Base and Enhanced plans**: maximum of **3**
+  Number of review excerpts to return. Plan limits apply:
+  - **Enhanced plan**: maximum of **3**
   - **Premium plan**: maximum of **7**
+
+  Defaults to `20`; the effective cap depends on your plan tier.
 </ParamField>
 
 <ParamField query="sort_by" type="string">
-  Sort order for the returned reviews. Accepted values:
-  - `yelp_sort` (default) — Yelp's relevance-based ranking
-  - `newest` — most recently posted first
-  - `oldest` — oldest first
-  - `rating_desc` — highest rated first
-  - `rating_asc` — lowest rated first
+  Sort order for the returned reviews. Currently the only accepted value is:
+  - `yelp_sort` (default) — Yelp's relevance-based ranking, considering recency, user voting, and review quality
 </ParamField>
 
 <Note>
-  Only review **excerpts** (up to ~160 characters) are available through the API. Full review text is not accessible. To read the complete review, direct users to the `url` field returned in each review object.
+  Only review **excerpts** (~160 characters each) are available through the API — full review text is not accessible via the API. To read the complete review, direct users to the `url` field in each review object.
+
+  **Plan limits:**
+  - **Base**: No access to review excerpts
+  - **Enhanced**: Up to **3** excerpts per request
+  - **Premium**: Up to **7** excerpts per request
 </Note>
 
 ## Example Request
@@ -57,7 +64,7 @@ Authorization: Bearer YOUR_API_KEY
 
 ```bash cURL
 curl --request GET \
-  --url 'https://api.yelp.com/v3/businesses/north-india-restaurant-san-francisco/reviews?sort_by=newest&limit=3' \
+  --url 'https://api.yelp.com/v3/businesses/north-india-restaurant-san-francisco/reviews?sort_by=yelp_sort&limit=3' \
   --header 'Authorization: Bearer YOUR_API_KEY'
 ```
 
@@ -67,7 +74,7 @@ import requests
 business_id = "north-india-restaurant-san-francisco"
 url = f"https://api.yelp.com/v3/businesses/{business_id}/reviews"
 headers = {"Authorization": "Bearer YOUR_API_KEY"}
-params = {"sort_by": "newest", "limit": 3}
+params = {"sort_by": "yelp_sort", "limit": 3}
 
 response = requests.get(url, headers=headers, params=params)
 print(response.json())
@@ -81,7 +88,7 @@ const response = await axios.get(
   `https://api.yelp.com/v3/businesses/${businessId}/reviews`,
   {
     headers: { Authorization: "Bearer YOUR_API_KEY" },
-    params: { sort_by: "newest", limit: 3 },
+    params: { sort_by: "yelp_sort", limit: 3 },
   }
 );
 console.log(response.data);

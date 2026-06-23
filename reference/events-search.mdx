@@ -1,5 +1,5 @@
 ---
-title: "GET /v3/events — Search for Local Yelp Events"
+title: "GET /v3/events — Search for Local Yelp Events by Date"
 sidebarTitle: "Events Search"
 description: "Search for local Yelp events by location, category, date range, and more. Returns a paginated list of event objects with details and metadata."
 ---
@@ -31,7 +31,13 @@ GET https://api.yelp.com/v3/events
 </ParamField>
 
 <ParamField query="sort_by" type="string">
-  Field to sort results by. Accepted values: `desc`, `asc`. Applies to the event start time.
+  Sort direction. Accepted values: `desc` (default) or `asc`. Controls whether results are returned in descending or ascending order relative to the `sort_on` field.
+</ParamField>
+
+<ParamField query="sort_on" type="string">
+  Field to sort results on. Accepted values:
+  - `popularity` (default) — sort by event popularity
+  - `time_start` — sort by event start time
 </ParamField>
 
 <ParamField query="categories" type="string">
@@ -149,6 +155,9 @@ curl -X GET \
     </ResponseField>
     <ResponseField name="is_canceled" type="boolean">
       Whether the event has been canceled.
+    </ResponseField>
+    <ResponseField name="is_official" type="boolean">
+      Whether the event is officially sponsored by Yelp.
     </ResponseField>
     <ResponseField name="attending_count" type="integer">
       Number of Yelp users who have marked themselves as attending.

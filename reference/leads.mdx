@@ -1,7 +1,7 @@
 ---
 title: "Leads API Reference — Yelp Request-a-Quote Endpoints"
 sidebarTitle: "Leads"
-description: "Read, respond to, and manage Yelp Request-a-Quote leads for your businesses. Includes all Lead and Lead Events CRUD endpoints with request/response schemas."
+description: "Read, respond to, and manage Yelp Request-a-Quote leads for your businesses. Covers all Lead and Lead Events endpoints with request/response schemas."
 ---
 
 The Yelp Leads API lets you ingest, track, and respond to leads generated through Yelp's "Request a Quote" flow. Once a consumer submits a quote request, Yelp creates a **lead** and associated **events** (messages and interactions). Your integration can read lead details, retrieve the full message thread, post replies on behalf of the business, and manage read/reply state — all without the business owner leaving your platform.
@@ -114,6 +114,16 @@ GET https://api.yelp.com/v3/leads/{id}/events
   The unique Yelp identifier for the lead.
 </ParamField>
 
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/leads/TbvEUYEi02cmSBmqCjQbkg/events" \
+  -H "Authorization: Bearer YOUR_OAUTH_TOKEN"
+```
+</CodeGroup>
+
 ### Example Response
 
 ```json
@@ -224,6 +234,16 @@ POST https://api.yelp.com/v3/leads/{id}/mark_as_replied
   The unique Yelp identifier for the lead.
 </ParamField>
 
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  "https://api.yelp.com/v3/leads/TbvEUYEi02cmSBmqCjQbkg/mark_as_replied" \
+  -H "Authorization: Bearer YOUR_OAUTH_TOKEN"
+```
+</CodeGroup>
+
 ---
 
 ## POST /v3/leads/{id}/events/mark_as_read — Mark Event as Read
@@ -240,6 +260,16 @@ POST https://api.yelp.com/v3/leads/{id}/events/mark_as_read
   The unique Yelp identifier for the lead.
 </ParamField>
 
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST \
+  "https://api.yelp.com/v3/leads/TbvEUYEi02cmSBmqCjQbkg/events/mark_as_read" \
+  -H "Authorization: Bearer YOUR_OAUTH_TOKEN"
+```
+</CodeGroup>
+
 ---
 
 ## GET /v3/businesses/{business_id}/lead_ids — Get Lead IDs for a Business
@@ -255,6 +285,16 @@ GET https://api.yelp.com/v3/businesses/{business_id}/lead_ids
 <ParamField path="business_id" type="string" required>
   The Yelp business ID to retrieve lead IDs for.
 </ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  "https://api.yelp.com/v3/businesses/SoVHhx7Hel_XX0DKCLp72Q/lead_ids" \
+  -H "Authorization: Bearer YOUR_OAUTH_TOKEN"
+```
+</CodeGroup>
 
 ### Example Response
 

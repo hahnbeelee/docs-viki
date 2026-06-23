@@ -1,7 +1,7 @@
 ---
-title: "Business Subscriptions API Reference"
+title: "Business Subscriptions API — Yelp Partner Subscriptions"
 sidebarTitle: "Subscriptions"
-description: "Manage Yelp partner business subscriptions for data feeds, listing management, and webhook notifications. Subscribe or unsubscribe up to 500 businesses per call."
+description: "Manage Yelp partner subscriptions for data feeds, listing management, and webhooks. Supports YELP_KNOWLEDGE, LISTING_MANAGEMENT, and WEBHOOK types."
 ---
 
 The Business Subscriptions API is the unified way for Yelp partners to manage which businesses they are subscribed to, and for what purpose. A single API call can update subscriptions across multiple types simultaneously. Subscriptions are **processed asynchronously** — a successful response only confirms the request was accepted, not that the subscription is active. Expect 99% of requests to be processed within 15 minutes.

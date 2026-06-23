@@ -66,16 +66,16 @@ Authorization: Bearer YOUR_API_KEY
   Business phone number. Accepts E.164 format (e.g. `"+14158683394"`) or digits only. Including a phone number can dramatically improve match quality.
 </ParamField>
 
-<ParamField query="zip_code" type="string">
-  Postal code. Providing a zip code helps distinguish businesses with similar names in the same city.
+<ParamField query="postal_code" type="string">
+  Postal code. Providing a postal code helps distinguish businesses with similar names in the same city.
 </ParamField>
 
 <ParamField query="yelp_business_id" type="string">
-  If you already have a candidate Yelp business ID, pass it here to verify the match directly.
+  If you already have a candidate Yelp business ID (22 characters), pass it here as a hint when finding a matching business.
 </ParamField>
 
 <ParamField query="limit" type="integer">
-  Maximum number of matching businesses to return. Defaults to **1**.
+  Maximum number of matching businesses to return. Defaults to **3**; maximum is **10**.
 </ParamField>
 
 <ParamField query="match_threshold" type="string">
@@ -91,7 +91,7 @@ Authorization: Bearer YOUR_API_KEY
 
 ```bash cURL
 curl --request GET \
-  --url 'https://api.yelp.com/v3/businesses/matches?name=Molinari+Delicatessen&address1=373+Columbus+Ave&city=San+Francisco&state=CA&country=US&zip_code=94133' \
+  --url 'https://api.yelp.com/v3/businesses/matches?name=Molinari+Delicatessen&address1=373+Columbus+Ave&city=San+Francisco&state=CA&country=US&postal_code=94133' \
   --header 'Authorization: Bearer YOUR_API_KEY'
 ```
 
@@ -106,7 +106,7 @@ params = {
     "city": "San Francisco",
     "state": "CA",
     "country": "US",
-    "zip_code": "94133",
+    "postal_code": "94133",
     "match_threshold": "default"
 }
 
@@ -127,7 +127,7 @@ const response = await axios.get(
       city: "San Francisco",
       state: "CA",
       country: "US",
-      zip_code: "94133",
+      postal_code: "94133",
       match_threshold: "default",
     },
   }
@@ -164,7 +164,7 @@ console.log(response.data);
 ## Response Fields
 
 <ResponseField name="businesses" type="array">
-  Array of matched business objects. Returns up to `limit` results (default: 1).
+  Array of matched business objects. Returns up to `limit` results (default: 3, max: 10).
 
   <Expandable title="Business match fields">
     <ResponseField name="id" type="string">
@@ -196,7 +196,7 @@ Matching accuracy depends on how closely your input data aligns with how Yelp re
 
 - **Use the DBA (trade name)** — Yelp lists businesses under their consumer-facing name, not their legal entity name.
 - **Separate joint businesses** — If a single record represents two businesses at the same address (e.g. `"AFC SUSHI / HOT WOK @ RALEYS #105"`), split them into individual lookup requests.
-- **Provide as many fields as possible** — `phone`, `zip_code`, and `latitude`/`longitude` all contribute to match scoring. The more fields you provide, the higher the confidence.
+- **Provide as many fields as possible** — `phone`, `postal_code`, and `latitude`/`longitude` all contribute to match scoring. The more fields you provide, the higher the confidence.
 - **Exclude non-consumer businesses** — Employee cafeterias, concession stands without clear identities, and businesses that are not consumer-facing are typically not listed on Yelp and will not match.
 
 <Tip>

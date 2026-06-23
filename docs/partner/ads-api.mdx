@@ -1,5 +1,5 @@
 ---
-title: "Manage Yelp Advertising Programs with the Ads API"
+title: "Manage Yelp Advertising Programs with the Reseller API"
 sidebarTitle: "Ads API"
 description: "Create, modify, and terminate CPC, Enhanced Profile, Branded Profile, and other Yelp ad programs for your advertisers using Basic HTTP Authentication."
 ---
@@ -15,7 +15,7 @@ The Yelp Ads API gives advertising partners a programmatic way to manage the ful
 
 ## Authentication
 
-The Ads API uses **Basic HTTP Authentication over SSL**. Supply the `username:password` pair issued to you by your Yelp account team in the `Authorization` header of every request. Ads API credentials are separate from any other Partner API credentials — do not reuse credentials across APIs.
+The Ads API uses **Basic HTTP Authentication over SSL**. Supply the `username:password` pair issued to you by your Yelp account team in the `Authorization` header of every request. The Ads API uses the **same credentials** as the Data Ingestion API — if you have already integrated with the Data Ingestion API, use those credentials here.
 
 ```bash
 curl -X POST \

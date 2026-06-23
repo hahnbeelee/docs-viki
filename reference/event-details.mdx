@@ -1,5 +1,5 @@
 ---
-title: "GET /v3/events/{id} — Get Yelp Event Details"
+title: "GET /v3/events/{id} — Get Yelp Event Details by ID"
 sidebarTitle: "Event Details"
 description: "Retrieve full details for a single Yelp event by its unique ID. Returns the complete event object including description, location, timing, and attendance."
 ---
@@ -20,6 +20,12 @@ GET https://api.yelp.com/v3/events/{id}
 
 <ParamField path="id" type="string" required>
   The unique Yelp identifier for the event. Obtain this value from the Events Search or Featured Event endpoints.
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="locale" type="string">
+  Locale code to return the event details in a specific language, for example `"en_US"` or `"fr_FR"`. Defaults to `"en_US"`.
 </ParamField>
 
 ## Example Request

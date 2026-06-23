@@ -1,7 +1,7 @@
 ---
-title: "Authenticate Requests to the Yelp Places API"
+title: "How to Authenticate Requests to the Yelp Places API"
 sidebarTitle: "Authentication"
-description: "Learn how to authenticate Yelp API requests using API key Bearer tokens, OAuth 2.0 for Partner APIs, and basic HTTP auth."
+description: "Learn how to authenticate Yelp API requests using API key Bearer tokens, OAuth 2.0 for contracted Partner APIs, and HTTP Basic auth for legacy endpoints."
 ---
 
 Every call to the Yelp API must be authenticated. The method you use depends on which API family you are accessing. The **Yelp Places API** uses a simple private API key passed as a Bearer token — no OAuth flow required. **Yelp Partner APIs** that act on behalf of a business owner use OAuth 2.0. Older Partner APIs hosted at `partner-api.yelp.com` use HTTP Basic authentication. This page covers all three methods.

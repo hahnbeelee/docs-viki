@@ -1,10 +1,10 @@
 ---
-title: "Get Business Reviews from the Yelp Places API"
+title: "Get Business Reviews from the Yelp Places API: All Plans"
 sidebarTitle: "Reviews"
 description: "Retrieve review excerpts and highlights for any Yelp business. Display real user feedback, ratings, and reviewer profiles in your app."
 ---
 
-The Yelp Places API lets you surface authentic user reviews directly in your application. You can fetch up to three review excerpts per business on Base and Enhanced plans, or up to seven excerpts on the Premium plan. Review highlights are also available on Premium to showcase the most useful feedback. All reviews include a star rating, a short excerpt, a link to the full review on Yelp, and a reviewer profile.
+The Yelp Places API lets you surface authentic user reviews directly in your application. You can fetch up to three review excerpts per business on the Enhanced plan, or up to seven excerpts on the Premium plan. Review excerpts are not available on the Base plan. Review highlights are also available on Premium to showcase the most useful feedback. All reviews include a star rating, a short excerpt, a link to the full review on Yelp, and a reviewer profile.
 
 <Note>
   The API returns **excerpts only** — approximately 160 characters per review. Full review text is not available through the API. To read a complete review, direct users to the `url` field returned with each review object.
@@ -174,8 +174,8 @@ curl -X GET \
 Understand which plan gives you access to each reviews feature:
 
 <CardGroup cols={3}>
-  <Card title="Base & Enhanced Plans" icon="star">
-    Up to **3 review excerpts** per business via `/reviews`. Review highlights endpoint is not available.
+  <Card title="Enhanced Plan" icon="star">
+    Up to **3 review excerpts** per business via `/reviews`. Review highlights endpoint is not available. Base plan does not include review excerpts.
   </Card>
   <Card title="Premium Plan" icon="stars">
     Up to **7 review excerpts** per business via `/reviews`, plus access to the `/review_highlights` endpoint.

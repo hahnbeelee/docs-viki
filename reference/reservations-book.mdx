@@ -1,5 +1,5 @@
 ---
-title: "POST /v3/bookings/{id}/reservations — Book a Reservation"
+title: "POST /v3/bookings/{business_id}/reservations — Book"
 sidebarTitle: "Book Reservation"
 description: "Create a confirmed Yelp reservation for a user. Requires a valid hold_id from the Holds endpoint plus the user's contact details and unique identifier."
 ---
@@ -37,7 +37,7 @@ POST https://api.yelp.com/v3/bookings/{business_id}/reservations
 </ParamField>
 
 <ParamField body="hold_id" type="string" required>
-  The hold ID obtained from `POST /v3/bookings/{id}/holds`. Identifies the reserved slot.
+  The hold ID obtained from `POST /v3/bookings/{business_id}/holds`. Identifies the reserved slot.
 </ParamField>
 
 <ParamField body="first_name" type="string" required>

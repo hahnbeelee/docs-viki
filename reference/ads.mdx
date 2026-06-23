@@ -1,7 +1,7 @@
 ---
 title: "Ads API Reference — Manage Yelp Advertising Programs"
 sidebarTitle: "Ads"
-description: "Create, modify, and terminate Yelp advertising programs for businesses. Covers CPC, Branded Profile, Enhanced Profile, and other ad program types via the Partner API."
+description: "Create, modify, and terminate Yelp advertising programs for businesses. Covers CPC, Branded Profile, Enhanced Profile, and other ad program types."
 ---
 
 The Yelp Advertising API lets you programmatically create and manage advertising programs for Yelp business listings. All create/modify/terminate operations are **asynchronous** — each call returns a `job_id` that you then poll for status. Programs include CPC (cost-per-click) campaigns, Branded Profile, Enhanced Profile, and several others.
@@ -207,7 +207,7 @@ curl -X GET \
 ```
 </CodeGroup>
 
-### Example Response
+### Example Response — Create Job
 
 ```json
 {
@@ -233,6 +233,53 @@ curl -X GET \
 }
 ```
 
+### Example Response — Modify Job
+
+```json
+{
+  "status": "COMPLETED",
+  "completed_at": "2024-01-01T12:10:00Z",
+  "created_at": "2024-01-01T12:05:00Z",
+  "business_results": [
+    {
+      "status": "COMPLETED",
+      "identifier_type": "PROGRAM",
+      "identifier": "c6HT44PKCaXqzN_BdgKPCw",
+      "update_results": {
+        "program_modified": {
+          "budget": { "status": "COMPLETED", "requested_value": 25000 },
+          "program_id": { "status": "COMPLETED", "requested_value": "c6HT44PKCaXqzN_BdgKPCw" },
+          "max_bid": { "status": "COMPLETED", "requested_value": 1000 }
+        }
+      }
+    }
+  ]
+}
+```
+
+### Example Response — Terminate Job
+
+```json
+{
+  "status": "COMPLETED",
+  "completed_at": "2024-01-01T12:15:00Z",
+  "created_at": "2024-01-01T12:10:00Z",
+  "business_results": [
+    {
+      "status": "COMPLETED",
+      "identifier_type": "PROGRAM",
+      "identifier": "c6HT44PKCaXqzN_BdgKPCw",
+      "update_results": {
+        "program_ended": {
+          "status": "COMPLETED",
+          "requested_value": "c6HT44PKCaXqzN_BdgKPCw"
+        }
+      }
+    }
+  ]
+}
+```
+
 ### Response Fields
 
 <ResponseField name="status" type="string">
@@ -240,11 +287,12 @@ curl -X GET \
 </ResponseField>
 
 <ResponseField name="business_results" type="array">
-  Per-business results array.
+  Per-business or per-program results array. For **create** jobs, `identifier_type` is `BUSINESS` and `identifier` is the Yelp business ID. For **modify** and **terminate** jobs, `identifier_type` is `PROGRAM` and `identifier` is the program ID.
   <Expandable title="Business result fields">
     <ResponseField name="status" type="string">`COMPLETED` or `REJECTED`.</ResponseField>
-    <ResponseField name="identifier" type="string">The Yelp business ID.</ResponseField>
-    <ResponseField name="update_results" type="object">Detailed status for each field updated by the job, including requested values and per-field status.</ResponseField>
+    <ResponseField name="identifier_type" type="string">`BUSINESS` for create jobs; `PROGRAM` for modify and terminate jobs.</ResponseField>
+    <ResponseField name="identifier" type="string">The Yelp business ID (create) or program ID (modify/terminate).</ResponseField>
+    <ResponseField name="update_results" type="object">Detailed status for each field updated by the job. Key is `program_added` (create), `program_modified` (modify), or `program_ended` (terminate).</ResponseField>
     <ResponseField name="error" type="object">Present only when `status` is `REJECTED`. Contains `code` and `message` fields describing the rejection reason.</ResponseField>
   </Expandable>
 </ResponseField>

@@ -1,7 +1,7 @@
 ---
 title: "Receive Real-Time Notifications with Yelp Webhooks"
 sidebarTitle: "Webhooks"
-description: "Configure and handle Yelp webhook notifications for reviews, leads, Data Ingestion jobs, and other business events in real time."
+description: "Set up and handle Yelp webhook notifications for leads, reviews, Data Ingestion job updates, and other partner business events in real time."
 ---
 
 Yelp webhooks let your server receive instant HTTP POST notifications whenever something important happens on a Yelp business page. Instead of polling the API for changes, Yelp pushes data to your configured endpoint the moment an event occurs — a new review, a new lead, a Data Ingestion job update, a verified license, or a consumer phone opt-in. This makes it possible to keep your systems synchronized with Yelp data in near-real time.
@@ -10,7 +10,67 @@ Yelp webhooks let your server receive instant HTTP POST notifications whenever s
   **Partner access only.** Webhooks are reserved exclusively for official Yelp [advertising](https://business.yelp.com/partners/), [listing management](https://business.yelp.com/partners/listing-management-partners/), and [Yelp Insights](https://business.yelp.com/data/products/insights-api/) partners. To inquire about partner status, visit one of those pages or contact your Yelp account representative.
 </Warning>
 
-## Setup Process
+## Two Webhook Models
+
+Yelp uses **two different webhook models** depending on which API you are integrating with:
+
+| Use case | Model | How to set up |
+|---|---|---|
+| **Leads API** | Self-serve — subscribe and unsubscribe programmatically via API | See [Leads API Webhook Setup](#leads-api-self-serve-webhook-setup) below |
+| **All other Partner APIs** (reviews, Data Ingestion, verified license, etc.) | Account-managed — share your URL with Yelp; Yelp verifies and activates it | See [Partner API Webhook Setup](#partner-api-webhook-setup) below |
+
+---
+
+## Leads API Self-Serve Webhook Setup
+
+The Leads API uses a **self-serve webhook model**. You subscribe and unsubscribe your endpoint programmatically using the access token obtained through the OAuth 2.0 Authorization Code flow — no Yelp account team involvement required.
+
+### Subscribe to webhooks
+
+```bash
+POST https://api.yelp.com/v3/webhooks
+```
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer {access_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "webhook_url": "https://yourplatform.example.com/yelp/webhooks",
+    "webhook_type": "leads_event"
+  }' \
+  https://api.yelp.com/v3/webhooks
+```
+
+The response returns:
+- `webhook_id` — use this to unsubscribe later.
+- `expiration_date` — when this subscription expires.
+
+By default, subscribing covers **all businesses** the authenticated business user has access to. To restrict notifications to specific businesses, include an optional `restricted_business_ids` array in the request body.
+
+<Warning>
+  **Webhook subscriptions expire after 14 days.** To avoid missing notifications,
+  unsubscribe and resubscribe at least one hour before the `expiration_date`.
+  Automate this renewal process in your integration.
+</Warning>
+
+### Unsubscribe from webhooks
+
+```bash
+DELETE https://api.yelp.com/v3/webhooks/{webhook_id}
+```
+
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer {access_token}" \
+  https://api.yelp.com/v3/webhooks/{webhook_id}
+```
+
+---
+
+## Partner API Webhook Setup
+
+For all Partner APIs other than the Leads API (such as reviews, Data Ingestion job updates, and verified license notifications), webhooks are set up through your Yelp account team.
 
 <Steps>
   <Step title="Become an official Yelp partner">
@@ -216,9 +276,7 @@ Once setup is complete, Yelp sends webhook notifications for the following event
 
 <AccordionGroup>
   <Accordion title="Can you share Yelp's IP addresses so we can allowlist them?">
-    Yes. For general webhooks, request the IP list from your Yelp account team and solutions engineer.
-
-    For the **Leads API webhooks** specifically, allowlist the following IP addresses:
+    For **Leads API webhooks** specifically, allowlist the following IP addresses:
 
     ```
     52.35.20.1
@@ -228,6 +286,8 @@ Once setup is complete, Yelp sends webhook notifications for the following event
     52.70.234.62
     52.70.115.133
     ```
+
+    For **other Partner API webhooks** (reviews, Data Ingestion, etc.), request the current IP list from your Yelp account team and solutions engineer.
   </Accordion>
   <Accordion title="Will I get notified if the business responds directly on Yelp?">
     Yes. Yelp webhooks notify you of all interactions on a lead regardless of source. You'll be notified for interactions made on Yelp.com and through the API, from both consumer and business users — including responses made by the business itself.
@@ -240,8 +300,10 @@ Once setup is complete, Yelp sends webhook notifications for the following event
   </Accordion>
   <Accordion title="What happens if Yelp can't verify my webhook URL?">
     Verification fails if your URL returns HTTP 404, times out, or responds with a body that doesn't match the expected `{"verification": "..."}` format. Yelp will **not** automatically retry URL verification — you must contact your Yelp account team to trigger a new attempt once your endpoint is ready.
+
+    This applies to the **Partner API webhook setup** only. The Leads API self-serve model does not use URL verification.
   </Accordion>
   <Accordion title="Can I receive webhooks for businesses I haven't subscribed to?">
-    No. You only receive webhooks for businesses that you have explicitly subscribed to using the Business Subscriptions API with `subscription_type: "WEBHOOK"`.
+    No. You only receive webhooks for businesses that you have explicitly subscribed to using the Business Subscriptions API with `subscription_type: "WEBHOOK"` (for Partner API webhooks), or that are covered by your Leads API webhook subscription.
   </Accordion>
 </AccordionGroup>
